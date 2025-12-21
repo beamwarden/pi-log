@@ -1,5 +1,5 @@
 import serial
-from pi_log.csv_parser import parse_geiger_csv
+from app.csv_parser import parse_geiger_csv
 
 
 class SerialReader:

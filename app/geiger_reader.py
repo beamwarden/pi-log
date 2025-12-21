@@ -1,14 +1,14 @@
 import argparse
 import time
 
-from pi_log.serial_reader import SerialReader
-from pi_log.storage import (
+from app.serial_reader import SerialReader
+from app.sqlite_store import (
     initialize_db,
     insert_reading,
     get_unpushed_readings,
     mark_readings_pushed,
 )
-from pi_log.push_client import PushClient
+from app.api_client import PushClient
 
 
 def run_pipeline(device_path, db_path, api_url, api_token, push_interval):

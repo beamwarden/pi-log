@@ -1,45 +1,46 @@
 ---
-- name: Ensure pi-log directories exist
-  file:
-    path: "{{ item }}"
+- name: Ensure /opt/pi-log exists
+  ansible.builtin.file:
+    path: /opt/pi-log
     state: directory
-    owner: pi
-    group: pi
+    owner: root
+    group: root
     mode: "0755"
-  loop:
-    - /opt/pi-log
-    - /var/lib/pi-log
-    - /etc/pi-log
 
-- name: Deploy pi-log code
-  copy:
-    src: "{{ playbook_dir }}/../../"
-    dest: /opt/pi-log
-    owner: pi
-    group: pi
+- name: Ensure /opt/pi-log/logs exists
+  ansible.builtin.file:
+    path: /opt/pi-log/logs
+    state: directory
+    owner: root
+    group: root
     mode: "0755"
-  notify: Restart pi-log
 
-- name: Deploy environment file
-  template:
-    src: env.j2
-    dest: /etc/pi-log/env
-    owner: pi
-    group: pi
-    mode: "0600"
-  notify: Restart pi-log
+- name: Copy ingestion service script
+  ansible.builtin.copy:
+    src: ingest.py
+    dest: /opt/pi-log/ingest.py
+    owner: root
+    group: root
+    mode: "0755"
 
-- name: Deploy systemd service
-  template:
+- name: Install systemd service unit
+  ansible.builtin.template:
     src: pi-log.service.j2
     dest: /etc/systemd/system/pi-log.service
+    owner: root
+    group: root
     mode: "0644"
-  notify:
-    - Reload systemd
-    - Restart pi-log
 
-- name: Enable and start service
-  systemd:
+- name: Install ingestion config
+  ansible.builtin.template:
+    src: config.toml.j2
+    dest: /opt/pi-log/config.toml
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Enable and start pi-log service
+  ansible.builtin.systemd:
     name: pi-log.service
-    enabled: yes
+    enabled: true
     state: started

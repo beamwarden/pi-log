@@ -1,0 +1,7 @@
+---
+# Handlers for the pi_log role
+
+- name: Restart pi-log service
+  ansible.builtin.systemd:
+    name: pi-log.service
+    state: restarted

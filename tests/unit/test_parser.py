@@ -1,5 +1,5 @@
 import pytest
-from pi_log.csv_parser import parse_geiger_csv
+from app.csv_parser import parse_geiger_csv
 
 
 def test_valid_csv_line():
@@ -47,3 +47,8 @@ def test_extra_whitespace():
 def test_non_string_input():
     assert parse_geiger_csv(None) is None
     assert parse_geiger_csv(123) is None
+
+
+def test_lowercase_mode_rejected():
+    line = "CPS, 1, CPM, 2, uSv/hr, 0.01, slow"
+    assert parse_geiger_csv(line) is None

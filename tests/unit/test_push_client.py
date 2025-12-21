@@ -1,15 +1,15 @@
 import json
 import responses
-from pi_log.push_client import PushClient
+from app.api_client import APIClient
 
 
 @responses.activate
-def test_push_success_marks_rows():
-    client = PushClient("http://example.com/api/ingest", "TOKEN")
+def test_push_success_calls_api_for_each_row():
+    client = APIClient("http://example.com/api", "TOKEN")
 
     responses.add(
         responses.POST,
-        "http://example.com/api/ingest",
+        "http://example.com/api/readings",
         json={"status": "ok"},
         status=200,
     )
@@ -19,45 +19,49 @@ def test_push_success_marks_rows():
         {"id": 2, "cps": 20, "cpm": 200, "usv": 0.20, "mode": "FAST"},
     ]
 
-    pushed = client.push(rows)
+    for row in rows:
+        client.push_record(row["id"], row)
 
-    assert pushed == [1, 2]
+    assert len(responses.calls) == 2
+    assert responses.calls[0].request.url == "http://example.com/api/readings"
+    assert responses.calls[1].request.url == "http://example.com/api/readings"
 
 
 @responses.activate
-def test_push_failure_returns_empty_list():
-    client = PushClient("http://example.com/api/ingest", "TOKEN")
+def test_push_failure_does_not_raise():
+    client = APIClient("http://example.com/api", "TOKEN")
 
     responses.add(
         responses.POST,
-        "http://example.com/api/ingest",
+        "http://example.com/api/readings",
         status=500,
     )
 
-    rows = [{"id": 1, "cps": 10, "cpm": 100, "usv": 0.10, "mode": "SLOW"}]
+    row = {"id": 1, "cps": 10, "cpm": 100, "usv": 0.10, "mode": "SLOW"}
 
-    pushed = client.push(rows)
+    # Should not raise an exception
+    client.push_record(row["id"], row)
 
-    assert pushed == []
+    assert len(responses.calls) == 1
 
 
 @responses.activate
 def test_payload_structure():
-    client = PushClient("http://example.com/api/ingest", "TOKEN")
+    client = APIClient("http://example.com/api", "TOKEN")
 
     responses.add(
         responses.POST,
-        "http://example.com/api/ingest",
+        "http://example.com/api/readings",
         json={"status": "ok"},
         status=200,
     )
 
-    rows = [{"id": 1, "cps": 5, "cpm": 50, "usv": 0.05, "mode": "INST"}]
+    row = {"id": 1, "cps": 5, "cpm": 50, "usv": 0.05, "mode": "INST"}
 
-    client.push(rows)
+    client.push_record(row["id"], row)
 
     sent = json.loads(responses.calls[0].request.body)
 
-    assert "readings" in sent
-    assert sent["readings"][0]["cps"] == 5
-    assert sent["readings"][0]["mode"] == "INST"
+    assert sent["id"] == 1
+    assert sent["cps"] == 5
+    assert sent["mode"] == "INST"

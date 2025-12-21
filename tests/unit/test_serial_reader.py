@@ -1,34 +1,42 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from pi_log.serial_reader import SerialReader
+from app.serial_reader import SerialReader
 
 
-@patch("pi_log.serial_reader.serial.Serial")
-def test_serial_reader_reads_lines(mock_serial):
+@patch("app.serial_reader.parse_geiger_csv")
+@patch("app.serial_reader.serial.Serial")
+def test_serial_reader_reads_lines(mock_serial, mock_parse):
+    # Mock serial port returning two valid lines then stopping
     mock_port = MagicMock()
     mock_port.readline.side_effect = [
         b"CPS, 10, CPM, 100, uSv/hr, 0.10, SLOW\n",
         b"CPS, 20, CPM, 200, uSv/hr, 0.20, FAST\n",
-        KeyboardInterrupt,  # stop loop
+        KeyboardInterrupt,
     ]
     mock_serial.return_value = mock_port
 
-    collected = []
+    # Mock parser outputs
+    mock_parse.side_effect = [
+        {"cps": 10},
+        {"cps": 20},
+    ]
 
-    def fake_handler(parsed):
-        collected.append(parsed)
+    reader = SerialReader("/dev/ttyUSB0")
 
-    reader = SerialReader("/dev/ttyUSB0", fake_handler)
-    reader.run()
+    # Patch the internal handler SerialReader uses after parsing
+    with patch.object(reader, "_handle_parsed") as mock_handler:
+        reader.run()
 
-    assert len(collected) == 2
-    assert collected[0]["cps"] == 10
-    assert collected[1]["cps"] == 20
+    # Should have been called twice with parsed dicts
+    assert mock_handler.call_count == 2
+    assert mock_handler.call_args_list[0].args[0]["cps"] == 10
+    assert mock_handler.call_args_list[1].args[0]["cps"] == 20
 
 
-@patch("pi_log.serial_reader.serial.Serial")
-def test_serial_reader_skips_malformed_lines(mock_serial):
+@patch("app.serial_reader.parse_geiger_csv")
+@patch("app.serial_reader.serial.Serial")
+def test_serial_reader_skips_malformed_lines(mock_serial, mock_parse):
     mock_port = MagicMock()
     mock_port.readline.side_effect = [
         b"INVALID LINE\n",
@@ -37,13 +45,17 @@ def test_serial_reader_skips_malformed_lines(mock_serial):
     ]
     mock_serial.return_value = mock_port
 
-    collected = []
+    # First parse returns None (malformed), second returns valid dict
+    mock_parse.side_effect = [
+        None,
+        {"cps": 5},
+    ]
 
-    def fake_handler(parsed):
-        collected.append(parsed)
+    reader = SerialReader("/dev/ttyUSB0")
 
-    reader = SerialReader("/dev/ttyUSB0", fake_handler)
-    reader.run()
+    with patch.object(reader, "_handle_parsed") as mock_handler:
+        reader.run()
 
-    assert len(collected) == 1
-    assert collected[0]["cps"] == 5
+    # Only the valid line should be handled
+    assert mock_handler.call_count == 1
+    assert mock_handler.call_args.args[0]["cps"] == 5
