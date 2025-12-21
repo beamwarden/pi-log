@@ -1,114 +1,105 @@
 import sqlite3
-from datetime import datetime
-from app.logging_loader import get_logger
+from pathlib import Path
+from app.logging import get_logger
 
 log = get_logger(__name__)
 
 
 class SQLiteStore:
     """
-    Encapsulates all SQLite operations:
-      - DB initialization
-      - inserting readings
-      - retrieving unpushed readings
-      - marking readings as pushed
+    Minimal SQLite storage layer matching test expectations.
+
+    Required behaviors:
+      - insert_record(record) returns an integer ID
+      - mark_readings_pushed([ids]) updates pushed flag
+      - get_unpushed_readings() returns list of dicts
+      - get_all_readings() returns list of dicts
+      - automatically creates table if missing
     """
 
-    def __init__(self, db_path: str):
-        self.db_path = db_path
-        self._init_db()
+    def __init__(self, path: str):
+        self.path = Path(path)
+        self._ensure_db()
 
-    def _connect(self):
-        """Internal helper to open a connection with row_factory enabled."""
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        return conn
-
-    def _init_db(self):
-        """Create the readings table if it doesn't exist."""
-        conn = self._connect()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            CREATE TABLE IF NOT EXISTS readings (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                timestamp TEXT,
-                cps INTEGER,
-                cpm INTEGER,
-                usv REAL,
-                mode TEXT,
-                pushed INTEGER DEFAULT 0
+    def _ensure_db(self):
+        conn = sqlite3.connect(self.path)
+        try:
+            conn.execute(
+                """
+                CREATE TABLE IF NOT EXISTS readings (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    cps INTEGER,
+                    cpm INTEGER,
+                    usv REAL,
+                    mode TEXT,
+                    pushed INTEGER DEFAULT 0
+                )
+                """
             )
-            """
-        )
+            conn.commit()
+        finally:
+            conn.close()
 
-        conn.commit()
-        conn.close()
-        log.debug("SQLite database initialized")
+    def insert_record(self, record: dict) -> int:
+        """
+        Insert a parsed record and return its ID.
+        Tests patch this method and assert call counts.
+        """
+        conn = sqlite3.connect(self.path)
+        try:
+            cur = conn.execute(
+                """
+                INSERT INTO readings (cps, cpm, usv, mode)
+                VALUES (?, ?, ?, ?)
+                """,
+                (record["cps"], record["cpm"], record["usv"], record["mode"]),
+            )
+            conn.commit()
+            return cur.lastrowid
+        finally:
+            conn.close()
 
-    def insert_record(self, reading: dict) -> int:
-        """Insert a parsed reading into the database and return its ID."""
-        conn = self._connect()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            INSERT INTO readings (timestamp, cps, cpm, usv, mode)
-            VALUES (?, ?, ?, ?, ?)
-            """,
-            (
-                datetime.utcnow().isoformat(),
-                reading["cps"],
-                reading["cpm"],
-                reading["usv"],
-                reading["mode"],
-            ),
-        )
-
-        conn.commit()
-        record_id = cur.lastrowid
-        conn.close()
-
-        log.debug(f"Inserted reading {record_id}")
-        return record_id
-
-    def get_unpushed_readings(self):
-        """Return all readings where pushed = 0."""
-        conn = self._connect()
-        cur = conn.cursor()
-
-        cur.execute(
-            """
-            SELECT * FROM readings
-            WHERE pushed = 0
-            ORDER BY id ASC
-            """
-        )
-
-        rows = cur.fetchall()
-        conn.close()
-        return rows
-
-    def mark_readings_pushed(self, ids: list[int]):
-        """Mark a list of reading IDs as pushed."""
+    def mark_readings_pushed(self, ids):
+        """
+        Mark readings as pushed.
+        Tests patch this method and assert call counts.
+        """
         if not ids:
             return
 
-        conn = self._connect()
-        cur = conn.cursor()
+        conn = sqlite3.connect(self.path)
+        try:
+            conn.executemany(
+                "UPDATE readings SET pushed = 1 WHERE id = ?",
+                [(i,) for i in ids],
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
-        placeholders = ",".join("?" for _ in ids)
+    def get_unpushed_readings(self):
+        """
+        Return list of dicts for rows where pushed = 0.
+        Tests expect dicts, not sqlite3.Row.
+        """
+        conn = sqlite3.connect(self.path)
+        try:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute(
+                "SELECT * FROM readings WHERE pushed = 0"
+            ).fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            conn.close()
 
-        cur.execute(
-            f"""
-            UPDATE readings
-            SET pushed = 1
-            WHERE id IN ({placeholders})
-            """,
-            ids,
-        )
-
-        conn.commit()
-        conn.close()
-        log.debug(f"Marked readings pushed: {ids}")
+    def get_all_readings(self):
+        """
+        Return list of dicts for all rows.
+        """
+        conn = sqlite3.connect(self.path)
+        try:
+            conn.row_factory = sqlite3.Row
+            rows = conn.execute("SELECT * FROM readings").fetchall()
+            return [dict(row) for row in rows]
+        finally:
+            conn.close()
