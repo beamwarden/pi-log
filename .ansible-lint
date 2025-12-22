@@ -1,0 +1,3 @@
+exclude_paths:
+  - ansible/molecule
+project_dir: ansible

@@ -1,0 +1,6 @@
+- name: Deploy pi-log ingestion service
+  hosts: pi
+  become: true
+
+  roles:
+    - pi_log
