@@ -9,6 +9,21 @@
 [![Molecule](https://img.shields.io/badge/molecule-tested-blue)](https://molecule.readthedocs.io/)
 
 
+# Pi‑Log Documentation
+
+This directory contains all project documentation, including architecture,
+developer workflows, troubleshooting guides, and deployment instructions.
+
+## Files
+
+- `architecture.md` — System overview, data flow, and component boundaries
+- `developer-guide.md` — Local development, testing, linting, and Makefile usage
+- `ingestion-flow.md` — Serial ingestion pipeline, parser behavior, and push logic
+- `troubleshooting.md` — Common issues, diagnostics, and recovery steps
+- `deployment.md` — Ansible-based deployment and service management
+
+All documents are written for future maintainers and emphasize reproducibility,
+clarity, and platform-agnostic workflows.
 
 Raspberry Pi ingestion pipeline for the LogExp radiation monitoring system.
 

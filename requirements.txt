@@ -3,3 +3,4 @@ pytest-mock
 responses
 pyserial
 requests
+flake8

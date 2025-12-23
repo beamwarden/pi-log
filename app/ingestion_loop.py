@@ -29,6 +29,8 @@ class IngestionLoop:
     """
 
     def __init__(self):
+        self.logger = log   # <-- FIX: ensure logger exists on self
+
         # Serial reader (patched in tests)
         self.reader = SerialReader(
             settings.serial.get("device", "/dev/ttyUSB0"),
@@ -45,6 +47,18 @@ class IngestionLoop:
             api_cfg.get("base_url", ""),
             api_cfg.get("token", ""),
         )
+
+        # Push client (optional)
+        push_cfg = settings.push
+        if push_cfg.get("enabled", False):
+            from app.api_client import APIClient
+            self.pusher = APIClient(
+                base_url=push_cfg.get("url", ""),
+                token=push_cfg.get("api_key", "")
+            )
+        else:
+            self.pusher = None
+
 
         # Loop timing
         self.poll_interval = settings.ingestion.get("poll_interval", 1)
@@ -65,6 +79,8 @@ class IngestionLoop:
           - KeyboardInterrupt always propagates
           - Other exceptions are logged and treated as failed ingestion
         """
+        self.logger.debug(f"PROCESSING RAW: {raw!r}")
+
         try:
             record = parse_geiger_csv(raw)
             if not record:
@@ -85,19 +101,23 @@ class IngestionLoop:
                         self.store.mark_readings_pushed([record_id])
 
                 except KeyboardInterrupt:
-                    # Do not swallow shutdown signals
                     raise
                 except Exception as exc:
-                    # Push failure should not kill ingestion
-                    log.error(f"Push failed: {exc}")
+                    self.logger.error(f"Push failed: {exc}")
+
+            # Optional push-to-LogExp
+            if self.pusher:
+                try:
+                    self.pusher.push(record)
+                except Exception as exc:
+                    self.logger.error(f"PushClient failed: {exc}")
 
             return True
 
         except KeyboardInterrupt:
-            # Always propagate shutdown signals
             raise
         except Exception as exc:
-            log.error(f"process_line failed: {exc}")
+            self.logger.error(f"process_line failed: {exc}")
             return False
 
     # ----------------------------------------------------------------------
@@ -106,13 +126,9 @@ class IngestionLoop:
     def _handle_parsed(self, record):
         """
         SerialReader calls this for each parsed record.
-
-        Fault tolerance is similar to process_line(), but starts
-        from an already-parsed record instead of raw text.
         """
         try:
             record_id = self.store.insert_record(record)
-
             metrics.record_ingestion(record)
 
             if self.api_enabled:
@@ -125,60 +141,50 @@ class IngestionLoop:
                 except KeyboardInterrupt:
                     raise
                 except Exception as exc:
-                    log.error(f"Push failed: {exc}")
+                    self.logger.error(f"Push failed: {exc}")
+
+            if self.pusher:
+                try:
+                    self.pusher.push(record)
+                except Exception as exc:
+                    self.logger.error(f"PushClient failed: {exc}")
 
         except KeyboardInterrupt:
             raise
         except Exception as exc:
-            log.error(f"_handle_parsed failed: {exc}")
+            self.logger.error(f"_handle_parsed failed: {exc}")
 
     # ----------------------------------------------------------------------
     # TESTS EXPECT run_once() TO EXIST
     # ----------------------------------------------------------------------
     def run_once(self):
-        """
-        Single-iteration runner used by tests and some integrations.
-
-        Fault tolerance:
-          - KeyboardInterrupt propagates
-          - Any other error in read/ingest is swallowed for this iteration
-        """
         try:
             raw = self.reader.read_line()
             self.process_line(raw)
         except KeyboardInterrupt:
             raise
         except Exception as exc:
-            log.error(f"run_once failed: {exc}")
+            self.logger.error(f"run_once failed: {exc}")
         return True
 
     # ----------------------------------------------------------------------
     # TESTS EXPECT run_forever() TO LOOP UNTIL KeyboardInterrupt
     # ----------------------------------------------------------------------
     def run_forever(self):
-        """
-        Production loop.
-
-        Fault tolerance:
-          - Loops until KeyboardInterrupt
-          - Any non-KeyboardInterrupt errors in run_once() are logged and ignored
-        """
         while True:
             try:
                 self.run_once()
             except KeyboardInterrupt:
                 break
             except Exception as exc:
-                # Last-ditch safety net; run_once() should already log
-                log.error(f"run_forever iteration failed: {exc}")
+                self.logger.error(f"run_forever iteration failed: {exc}")
             time.sleep(self.poll_interval)
+
 
 def main():
     loop = IngestionLoop()
     loop.run_forever()
 
-if __name__ == "__main__":
-    main()
 
-if __name__ == "app.ingestion_loop":
+if __name__ == "__main__":
     main()
