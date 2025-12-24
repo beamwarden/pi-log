@@ -232,7 +232,7 @@ index 0000000..12907c3
 +SQLiteStore = sqlite_store.SQLiteStore
 +parse_geiger_csv = serial_reader.parse_geiger_csv
 +
-+log = get_logger(__name__)
++log = get_logger("pi-log")
 +
 +
 +class IngestionLoop:

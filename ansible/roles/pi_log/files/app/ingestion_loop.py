@@ -6,7 +6,7 @@ import app.sqlite_store as sqlite_store
 import app.metrics as metrics
 
 from app.api_client import APIClient
-from app.config import settings
+from app.config_loader import load_config
 from app.logging import get_logger
 from app.logexp_client import LogExpClient
 
@@ -15,7 +15,7 @@ SerialReader = serial_reader.SerialReader
 SQLiteStore = sqlite_store.SQLiteStore
 parse_geiger_csv = serial_reader.parse_geiger_csv
 
-log = get_logger(__name__)
+log = get_logger("pi-log")
 
 
 class IngestionLoop:
@@ -29,20 +29,20 @@ class IngestionLoop:
       - Wire SerialReader._handle_parsed to ingestion logic
     """
 
-    def __init__(self):
+    def __init__(self, settings):
         self.logger = log
-
+        self.settings = settings
         # Serial reader (patched in tests)
         self.reader = SerialReader(
-            settings.serial.get("device", "/dev/ttyUSB0"),
-            settings.serial.get("baudrate", 9600),
+            self.settings.serial.get("device", "/dev/ttyUSB0"),
+            self.settings.serial.get("baudrate", 9600),
         )
 
         # SQLite store (patched in tests)
         self.store = SQLiteStore(settings.sqlite.get("path", ":memory:"))
 
         # API client (optional)
-        api_cfg = settings.api
+        api_cfg = self.settings.api
         self.api_enabled = api_cfg.get("enabled", False)
         if self.api_enabled:
             self.api = APIClient(
@@ -53,7 +53,7 @@ class IngestionLoop:
             self.api = None
 
         # LogExp client (optional)
-        push_cfg = settings.push
+        push_cfg = self.settings.push
         self.logexp_enabled = push_cfg.get("enabled", False)
         if self.logexp_enabled:
             self.logexp = LogExpClient(
@@ -64,7 +64,7 @@ class IngestionLoop:
             self.logexp = None
 
         # Loop timing
-        self.poll_interval = settings.ingestion.get("poll_interval", 1)
+        self.poll_interval = self.settings.ingestion.get("poll_interval", 1)
 
         # Wire SerialReader callback to ingestion logic
         self.reader._handle_parsed = self._handle_parsed
@@ -195,7 +195,11 @@ class IngestionLoop:
 
 
 def main():
-    loop = IngestionLoop()
+    import logging
+    logging.basicConfig(level=logging.DEBUG)
+
+    settings = load_config("/opt/pi-log/config.toml")
+    loop = IngestionLoop(settings)
     loop.run_forever()
 
 

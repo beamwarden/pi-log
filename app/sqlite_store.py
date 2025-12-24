@@ -2,7 +2,7 @@ import sqlite3
 from pathlib import Path
 from app.logging import get_logger
 
-log = get_logger(__name__)
+log = get_logger("pi-log")
 
 
 class SQLiteStore:

@@ -9,7 +9,7 @@ except ModuleNotFoundError:
 
 
 BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_CONFIG_PATH = BASE_DIR / "config.toml"
+DEFAULT_CONFIG_PATH = Path("/opt/pi-log/config.toml")
 
 
 def load_config(path: Union[str, os.PathLike] = DEFAULT_CONFIG_PATH) -> dict:
@@ -23,16 +23,26 @@ def load_config(path: Union[str, os.PathLike] = DEFAULT_CONFIG_PATH) -> dict:
       - If file malformed → return {}.
     """
     path = Path(path)
-
+    print("DEBUG: loading from:", path)
     if not path.exists():
         return {}
 
     try:
         with path.open("rb") as f:
-            return tomllib.load(f)
+            data =  tomllib.load(f)
+            return SettingsNamespace(data)
     except Exception:
         return {}
 
+class SettingsNamespace:
+    def __init__(self, data):
+        for key, value in data.items():
+            if isinstance(value, dict):
+                setattr(self, key, SettingsNamespace(value))
+            else:
+                setattr(self, key, value)
 
+    def get(self, key, default=None):
+        return getattr(self, key, default)
 # Tests expect CONFIG to exist at module level
 CONFIG = load_config()

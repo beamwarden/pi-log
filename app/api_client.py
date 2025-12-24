@@ -2,7 +2,7 @@ import json
 import requests
 from app.logging import get_logger
 
-log = get_logger(__name__)
+log = get_logger("pi-log")
 
 
 class APIClient:

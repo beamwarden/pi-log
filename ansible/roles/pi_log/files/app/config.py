@@ -32,7 +32,13 @@ class Settings:
                     "token": "",
                 },
                 "ingestion": {"poll_interval": 1},
+                "push": {
+                    "enabled": False,
+                    "url": "",
+                    "api_key": "",
+                },
             }
+
 
     @property
     def serial(self):
@@ -49,6 +55,10 @@ class Settings:
     @property
     def ingestion(self):
         return self._data.get("ingestion", {})
+
+    @property
+    def push(self):
+        return self._data.get("push", {})
 
 
 settings = Settings()

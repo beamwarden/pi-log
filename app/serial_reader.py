@@ -1,7 +1,7 @@
 import os
 import io
 import serial
-from unittest.mock import MagicMock
+from app.logging import get_logger
 
 
 def parse_geiger_csv(line: str):
@@ -76,25 +76,20 @@ class SerialReader:
           - Else if running under pytest, use a harmless fake (BytesIO).
           - Else open a real serial port (production).
         """
+        self.logger = get_logger("pi-log")
+
         # 1. Explicit fake serial object wins
         if serial_obj is not None:
             self.ser = serial_obj
             return
 
-        # 2. If tests have patched serial.Serial, honor that
-        if isinstance(serial.Serial, MagicMock):
-            self.ser = serial.Serial(device, baudrate, timeout=timeout)
-            return
-
-        # 3. If running under pytest AND Serial is NOT patched,
+        # 2. If running under pytest AND Serial is NOT patched,
         #    this is an IngestionLoop test → use harmless fake
         if "PYTEST_CURRENT_TEST" in os.environ:
-            import io
             self.ser = io.BytesIO()
             return
 
-        # 4. Production path
-        import serial
+        # 3. Production path
         self.ser = serial.Serial(device, baudrate, timeout=timeout)
 
 
