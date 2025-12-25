@@ -4,3 +4,10 @@ responses
 pyserial
 requests
 flake8
+fastapi==0.115.0
+uvicorn==0.30.0
+pydantic==2.7.0
+starlette==0.37.2
+anyio==4.4.0
+httpx==0.27.0
+python-dotenv

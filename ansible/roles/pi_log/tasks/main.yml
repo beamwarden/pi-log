@@ -60,6 +60,28 @@
     group: root
     mode: "0644"
 
+# ----------------------------------------
+# Python virtual environment
+# ----------------------------------------
+
+- name: Ensure Python venv directory exists
+  ansible.builtin.file:
+    path: /opt/pi-log/.venv
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Create Python virtual environment
+  ansible.builtin.command:
+    cmd: python3 -m venv /opt/pi-log/.venv
+    creates: /opt/pi-log/.venv/bin/activate
+
+- name: Install Python dependencies into venv
+  ansible.builtin.pip:
+    requirements: /opt/pi-log/requirements.txt
+    virtualenv: /opt/pi-log/.venv
+
 - name: Install ingestion systemd unit
   ansible.builtin.template:
     src: pi-log.service.j2

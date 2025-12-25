@@ -24,6 +24,22 @@ install: venv ## Install Python dependencies
 freeze: ## Freeze dependencies to requirements.txt
 	.venv/bin/pip freeze > requirements.txt
 
+.PHONY: venv-rebuild
+
+venv-rebuild:
+    rm -rf /opt/pi-log/.venv
+    python3 -m venv /opt/pi-log/.venv
+    /opt/pi-log/.venv/bin/pip install --upgrade pip
+    /opt/pi-log/.venv/bin/pip install -r requirements.txt
+
+.PHONY: venv-rebuild-pi
+
+venv-rebuild-pi:
+    ansible -i ansible/inventory.ini all -m shell -a "rm -rf /opt/pi-log/.venv"
+    ansible -i ansible/inventory.ini all -m shell -a "python3 -m venv /opt/pi-log/.venv"
+    ansible -i ansible/inventory.ini all -m pip -a "requirements=/opt/pi-log/requirements.txt virtualenv=/opt/pi-log/.venv"
+
+
 # -------------------------------------------------------------------
 # Local development
 # -------------------------------------------------------------------
