@@ -1,0 +1,17 @@
+[Unit]
+Description=Pi Log API Service
+After=network.target pi-log.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/pi-log
+ExecStart=/usr/bin/python3 -m uvicorn app.api:app --host 0.0.0.0 --port 8000
+Restart=on-failure
+RestartSec=5
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

@@ -60,10 +60,18 @@
     group: root
     mode: "0644"
 
-- name: Install systemd service unit
+- name: Install ingestion systemd unit
   ansible.builtin.template:
     src: pi-log.service.j2
     dest: /etc/systemd/system/pi-log.service
+    owner: root
+    group: root
+    mode: "0644"
+
+- name: Install API systemd unit
+  ansible.builtin.template:
+    src: pi-log-api.service.j2
+    dest: /etc/systemd/system/pi-log-api.service
     owner: root
     group: root
     mode: "0644"
@@ -72,8 +80,14 @@
   ansible.builtin.systemd:
     daemon_reload: true
 
-- name: Enable and restart pi-log service
+- name: Enable and restart ingestion service
   ansible.builtin.systemd:
     name: pi-log.service
+    enabled: true
+    state: restarted
+
+- name: Enable and restart API service
+  ansible.builtin.systemd:
+    name: pi-log-api.service
     enabled: true
     state: restarted
