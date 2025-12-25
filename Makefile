@@ -184,3 +184,7 @@ release: ## Usage: make release VERSION=0.1.1
 	git push
 	git push --tags
 	@echo "Release v$(VERSION) pushed. GitHub Actions will publish to Galaxy."
+
+.PHONY: deploy
+deploy:
+	cd ansible && make deploy

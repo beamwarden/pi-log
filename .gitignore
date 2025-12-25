@@ -50,6 +50,8 @@ __pycache__/
 logs/
 tmp/
 run/
+*.db
+__pycache__/
 
 # ================================
 #   Raspberry Pi Deployment
