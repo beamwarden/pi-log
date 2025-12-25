@@ -11,8 +11,8 @@ ExecStartPre=/bin/sleep 5
 ExecStart=/usr/bin/python3 -m app.ingestion_loop --config /opt/pi-log/config.toml
 Restart=on-failure
 RestartSec=5
-StandardOutput=append:/opt/pi-log/logs/service.log
-StandardError=append:/opt/pi-log/logs/error.log
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

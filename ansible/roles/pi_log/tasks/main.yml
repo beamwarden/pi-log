@@ -23,6 +23,11 @@
     group: root
     mode: "0755"
 
+- name: Remove old application directory
+  ansible.builtin.file:
+    path: /opt/pi-log/app
+    state: absent
+
 - name: Deploy application package
   ansible.builtin.copy:
     src: app/
@@ -30,6 +35,22 @@
     owner: root
     group: root
     mode: "0755"
+
+- name: Ensure /opt/pi-log/app/logging exists
+  ansible.builtin.file:
+    path: /opt/pi-log/app/logging
+    state: directory
+    owner: root
+    group: root
+    mode: "0755"
+
+- name: Deploy logging config
+  ansible.builtin.copy:
+    src: app/logging/logging.toml
+    dest: /opt/pi-log/app/logging/logging.toml
+    owner: root
+    group: root
+    mode: "0644"
 
 - name: Deploy ingestion config
   ansible.builtin.template:

@@ -7,7 +7,7 @@ import app.metrics as metrics
 
 from app.api_client import APIClient
 from app.config_loader import load_config
-from app.logging import get_logger
+from app.logging import get_logger, setup_logging
 from app.logexp_client import LogExpClient
 
 # Re-export names so tests can patch them via app.ingestion_loop.*
@@ -195,9 +195,7 @@ class IngestionLoop:
 
 
 def main():
-    import logging
-    logging.basicConfig(level=logging.DEBUG)
-
+    setup_logging()
     settings = load_config("/opt/pi-log/config.toml")
     loop = IngestionLoop(settings)
     loop.run_forever()
