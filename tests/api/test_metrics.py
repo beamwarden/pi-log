@@ -1,13 +1,4 @@
-import pytest
-from fastapi.testclient import TestClient
-
-from app.api import app
-
-
-@pytest.fixture
-def client():
-    return TestClient(app)
-
+from tests.api.conftest import client
 
 def test_metrics_shape(client):
     response = client.get("/metrics")

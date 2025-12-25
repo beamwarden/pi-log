@@ -1,13 +1,13 @@
 import time
 from typing import List, Optional
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import Depends, FastAPI, HTTPException, Query
 from pydantic import BaseModel
 
 from app.sqlite_store import SQLiteStore
 
 APP_START_TIME = time.time()
-DB_PATH = "/var/lib/pi-log/readings.db"  # production path; override in tests if needed
+DB_PATH = "/var/lib/pi-log/readings.db"  # production path; tests override get_store
 
 app = FastAPI(title="Pi-Log API", version="0.1.0")
 
@@ -47,7 +47,12 @@ class MetricsResponse(BaseModel):
 # -------------------------
 
 def get_store() -> SQLiteStore:
-    # Simple, production-focused dependency
+    """
+    Production-focused dependency for obtaining a SQLiteStore.
+
+    Tests should override this via:
+        app.dependency_overrides[get_store] = override_get_store
+    """
     return SQLiteStore(DB_PATH)
 
 
@@ -60,12 +65,14 @@ def get_uptime_seconds() -> float:
 # -------------------------
 
 @app.get("/health", response_model=HealthResponse)
-def health():
+def health(store: SQLiteStore = Depends(get_store)) -> HealthResponse:
+    """
+    Basic health check with DB connectivity status.
+    """
     uptime = get_uptime_seconds()
     db_status = "ok"
-    db_error = None
+    db_error: Optional[str] = None
 
-    store = get_store()
     try:
         # Cheap connectivity check
         store.get_latest_reading()
@@ -81,13 +88,14 @@ def health():
 
 
 @app.get("/readings/latest", response_model=Reading)
-def latest_reading():
-    store = get_store()
+def latest_reading(store: SQLiteStore = Depends(get_store)) -> Reading:
+    """
+    Return the most recent reading, or 404 if none exist.
+    """
     row = store.get_latest_reading()
     if not row:
         raise HTTPException(status_code=404, detail="No readings available")
 
-    # Adapt this to your actual schema
     return Reading(
         id=row["id"],
         timestamp=row["timestamp"],
@@ -99,9 +107,14 @@ def latest_reading():
 
 
 @app.get("/readings", response_model=List[Reading])
-def list_readings(limit: int = Query(10, ge=1, le=1000)):
-    store = get_store()
-    rows = store.get_recent_readings(limit=limit)  # you'll implement this
+def list_readings(
+    limit: int = Query(10, ge=1, le=1000),
+    store: SQLiteStore = Depends(get_store),
+) -> List[Reading]:
+    """
+    Return up to `limit` recent readings.
+    """
+    rows = store.get_recent_readings(limit=limit)
 
     readings: List[Reading] = []
     for row in rows:
@@ -119,8 +132,10 @@ def list_readings(limit: int = Query(10, ge=1, le=1000)):
 
 
 @app.get("/metrics", response_model=MetricsResponse)
-def metrics():
-    store = get_store()
+def metrics(store: SQLiteStore = Depends(get_store)) -> MetricsResponse:
+    """
+    Basic metrics for ingestion and uptime.
+    """
     try:
         # crude metric: count all records
         count = store.count_readings()
@@ -138,3 +153,5 @@ if __name__ == "__main__":
     import uvicorn
 
     uvicorn.run(app, host="0.0.0.0", port=8000)
+
+print(">>> API MODULE ID:", id(app))
