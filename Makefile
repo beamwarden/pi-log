@@ -1,3 +1,6 @@
+PI_HOST=192.168.1.166
+PI_USER=pi
+
 help: ## Show help
 	@echo ""
 	@echo "Available commands:"
@@ -27,17 +30,17 @@ freeze: ## Freeze dependencies to requirements.txt
 .PHONY: venv-rebuild
 
 venv-rebuild:
-    rm -rf /opt/pi-log/.venv
-    python3 -m venv /opt/pi-log/.venv
-    /opt/pi-log/.venv/bin/pip install --upgrade pip
-    /opt/pi-log/.venv/bin/pip install -r requirements.txt
+	rm -rf /opt/pi-log/.venv
+	python3 -m venv /opt/pi-log/.venv
+	/opt/pi-log/.venv/bin/pip install --upgrade pip
+	/opt/pi-log/.venv/bin/pip install -r requirements.txt
 
 .PHONY: venv-rebuild-pi
 
 venv-rebuild-pi:
-    ansible -i ansible/inventory.ini all -m shell -a "rm -rf /opt/pi-log/.venv"
-    ansible -i ansible/inventory.ini all -m shell -a "python3 -m venv /opt/pi-log/.venv"
-    ansible -i ansible/inventory.ini all -m pip -a "requirements=/opt/pi-log/requirements.txt virtualenv=/opt/pi-log/.venv"
+	ansible -i ansible/inventory.ini all -m shell -a "rm -rf /opt/pi-log/.venv"
+	ansible -i ansible/inventory.ini all -m shell -a "python3 -m venv /opt/pi-log/.venv"
+	ansible -i ansible/inventory.ini all -m pip -a "requirements=/opt/pi-log/requirements.txt virtualenv=/opt/pi-log/.venv"
 
 
 # -------------------------------------------------------------------
@@ -83,7 +86,7 @@ hosts: ## Show parsed Ansible inventory
 	ansible-inventory -i ansible/inventory.ini --list
 
 ssh: ## SSH into the Raspberry Pi
-	ssh pi@pi1
+	ssh $(PI_USER)@$(PI_HOST)
 
 # -------------------------------------------------------------------
 # File sync operations
@@ -95,21 +98,21 @@ sync: ## Sync project files to the Pi via rsync (mirror mode)
 		--exclude '__pycache__' \
 		--exclude '.git' \
 		--exclude 'node_modules' \
-		./ pi@pi1:/opt/pi-log/
+		./ $(PI_USER)@$(PI_HOST):/opt/pi-log/
 	ansible pi1 -i ansible/inventory.ini -m systemd -a "name=pi-log state=restarted"
 
 sync-code: ## Sync only app/ and ansible/ to the Pi
 	rsync -avz --delete \
 		--exclude '__pycache__' \
 		--exclude '.git' \
-		app/ pi@pi1:/opt/pi-log/app/
+		app/ $(PI_USER)@$(PI_HOST):/opt/pi-log/app/
 	rsync -avz --delete \
 		--exclude '.git' \
-		ansible/ pi@pi1:/opt/pi-log/ansible/
+		ansible/ $(PI_USER)@$(PI_HOST):/opt/pi-log/ansible/
 
 sync-service: ## Push systemd unit and restart service
-	rsync -avz ansible/roles/pi_log/files/pi-log.service pi@pi1:/etc/systemd/system/pi-log.service
-	ssh pi@pi1 "sudo systemctl daemon-reload && sudo systemctl restart pi-log"
+	rsync -avz ansible/roles/pi_log/files/pi-log.service $(PI_USER)@$(PI_HOST):/etc/systemd/system/pi-log.service
+	ssh $(PI_USER)@$(PI_HOST) "sudo systemctl daemon-reload && sudo systemctl restart pi-log"
 
 deploy-fast: ## Fast deploy: sync + restart without full Ansible run
 	rsync -avz --delete \
