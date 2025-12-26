@@ -1,13 +1,7 @@
 # pi-log
-# pi_log — Ansible Role
 
 [![CI](https://github.com/gaspode-wonder/pi-log/actions/workflows/ci.yml/badge.svg)](https://github.com/gaspode-wonder/pi-log/actions/workflows/ci.yml)
 [![Release](https://github.com/gaspode-wonder/pi-log/actions/workflows/release.yml/badge.svg)](https://github.com/gaspode-wonder/pi-log/actions/workflows/release.yml)
-[![Ansible Galaxy](https://img.shields.io/badge/galaxy-gaspode__wonder.pi__log-blue.svg)](https://galaxy.ansible.com/ui/standalone/roles/gaspode_wonder/pi_log)
-[![Galaxy Downloads](https://img.shields.io/ansible/role/d/gaspode_wonder/pi_log)](https://galaxy.ansible.com/ui/standalone/roles/gaspode_wonder/pi_log)
-[![Lint](https://img.shields.io/badge/ansible--lint-passing-brightgreen)](https://ansible-lint.readthedocs.io/)
-[![Molecule](https://img.shields.io/badge/molecule-tested-blue)](https://molecule.readthedocs.io/)
-
 
 # Pi‑Log Documentation
 
