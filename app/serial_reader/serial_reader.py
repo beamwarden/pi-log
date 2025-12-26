@@ -18,11 +18,9 @@ class SerialReader:
         self.baudrate = baudrate
         self.timeout = timeout
 
-        # Callback set later by ingestion loop
-        self._handle_parsed = None
-
         # Serial comes from shim so tests can patch it
         self.ser = None
+        self._handle_parsed = None
 
     def read_line(self):
         if self.ser is None:
@@ -33,12 +31,10 @@ class SerialReader:
             )
 
         raw = self.ser.readline()
-        if self._handle_parsed:
-            record = parse_geiger_csv(raw)
-            if record is not None:
-                self._handle_parsed(record)
-        return raw
+        if not raw:
+            return ""
 
+        return raw.decode("utf-8", errors="ignore").strip()
 
     def run(self):
         """
@@ -50,10 +46,10 @@ class SerialReader:
                 raw = self.read_line()
                 parsed = parse_geiger_csv(raw)
 
-                if parsed is not None and self._handle_parsed:
+                if parsed:
                     self._handle_parsed(parsed)
 
-            except KeyboardInterrupt:
+            except (KeyboardInterrupt, StopIteration):
                 break
             except Exception:
                 time.sleep(0.1)
