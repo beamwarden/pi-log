@@ -1,8 +1,8 @@
 from unittest.mock import patch, MagicMock
 import sqlite3
 
-from app.serial_reader import SerialReader
-from app.csv_parser import parse_geiger_csv
+from app.ingestion.serial_reader import SerialReader
+from app.ingestion.csv_parser import parse_geiger_csv
 from app.sqlite_store import SQLiteStore
 
 

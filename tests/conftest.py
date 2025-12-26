@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from app.settings import Settings
-from app.ingestion_loop import IngestionLoop
+from app.ingestion.ingestion_loop import IngestionLoop
 from app.sqlite_store import SQLiteStore
 
 # ---------------------------------------------------------------------------

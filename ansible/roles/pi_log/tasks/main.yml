@@ -30,7 +30,7 @@
 
 - name: Deploy application package
   ansible.builtin.copy:
-    src: app/
+    src: "{{ playbook_dir }}/../app/"
     dest: /opt/pi-log/app/
     owner: root
     group: root

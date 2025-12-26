@@ -1,6 +1,6 @@
 from unittest.mock import patch, MagicMock
-from app.serial_reader import SerialReader
-from app.csv_parser import parse_geiger_csv
+from app.ingestion.serial_reader import SerialReader
+from app.ingestion.csv_parser import parse_geiger_csv
 
 @patch("app.serial_reader.serial.Serial")
 def test_serial_to_parser_to_storage(mock_serial, fake_store):

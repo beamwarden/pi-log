@@ -1,8 +1,11 @@
 import time
 from fastapi import Depends
 
-# Import modules (not symbols) so tests can patch correctly
-import app.serial_reader as serial_reader
+# Correct imports for the new ingestion package structure
+from app.ingestion.serial_reader import SerialReader
+from app.ingestion.csv_parser import parse_geiger_csv
+
+# These modules have not yet been moved (Cluster 2 will handle storage)
 import app.sqlite_store as sqlite_store
 import app.metrics as metrics
 
@@ -12,10 +15,8 @@ from app.logging import get_logger, setup_logging
 from app.logexp_client import LogExpClient
 from app.settings import Settings
 
-# Re-export names so tests can patch them via app.ingestion_loop.*
-SerialReader = serial_reader.SerialReader
+# Re-export SQLiteStore so tests can patch via app.ingestion_loop.*
 SQLiteStore = sqlite_store.SQLiteStore
-parse_geiger_csv = serial_reader.parse_geiger_csv
 
 log = get_logger("pi-log")
 

@@ -1,6 +1,6 @@
 import pytest
 
-from app.csv_parser import parse_geiger_csv
+from app.ingestion.csv_parser import parse_geiger_csv
 
 
 def test_parse_valid_line():
