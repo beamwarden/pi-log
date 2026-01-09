@@ -1,22 +1,24 @@
 [Unit]
-Description=Pi-Log Geiger Counter Ingestion Service
-After=network-online.target
-Wants=network-online.target
+Description=Pi Log Ingestion Service
+After=network.target
 
 [Service]
 Type=simple
-User=pi
+User=root
+Group=root
 WorkingDirectory=/opt/pi-log
-ExecStart=/usr/bin/python3 -m pi_log.geiger_reader \
-    --device /dev/ttyUSB0 \
-    --db /var/lib/pi-log/readings.db \
-    --api-url https://logexp.example.com/api/ingest \
-    --api-token ${PI_LOG_API_TOKEN}
 
-Restart=on-failure
+# Python path fix for Pi 3
+Environment=PYTHONPATH=/opt/pi-log
+
+# Use the venv Python
+ExecStart=/opt/pi-log/.venv/bin/python3.11 -m app.ingestion_loop --config /opt/pi-log/config.toml
+
+Restart=always
 RestartSec=5
 
-EnvironmentFile=/etc/pi-log/env
+StandardOutput=journal
+StandardError=journal
 
 [Install]
 WantedBy=multi-user.target

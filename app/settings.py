@@ -9,6 +9,7 @@ access (settings.serial.device) while preserving dict semantics.
 
 class Section:
     """Wrap a dict so attributes work: section.key instead of section['key']"""
+
     def __init__(self, data: dict):
         self._data = data or {}
 
@@ -32,6 +33,7 @@ class Settings:
     """
     Wrap the dict returned by load_config() into attribute-accessible sections.
     """
+
     def __init__(self, raw: dict):
         raw = raw or {}
         self.serial = Section(raw.get("serial", {}))
@@ -40,7 +42,6 @@ class Settings:
         self.push = Section(raw.get("push", {}))
         self.ingestion = Section(raw.get("ingestion", {}))
         self.telemetry = Section(raw.get("telemetry", {}))
-
 
     @classmethod
     def from_dict(cls, raw: dict):

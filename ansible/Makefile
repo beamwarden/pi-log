@@ -8,13 +8,13 @@ ROLE_DIR=roles/pi_log
 SCENARIO=default
 SERVICE=pi-log.service
 
-.PHONY: deploy restart logs tail status lint test converge verify destroy idempotence
+.PHONY: deploy restart logs tail status lint test converge verify destroy idempotence start stop
 
 # -------------------------
 # Deployment Commands
 # -------------------------
 
-deploy: sync-app
+deploy:
 	ansible-playbook -i $(INVENTORY) $(PLAYBOOK) --tags pi_log --diff
 
 restart:
@@ -53,33 +53,8 @@ idempotence:
 	cd $(ROLE_DIR) && molecule idempotence -s $(SCENARIO)
 
 # ----------------------------------------
-# Sync repo app → Ansible role
-# ----------------------------------------
-
-ROLE_APP_DIR=roles/pi_log/files/app
-REPO_APP_DIR=../app
-
-.PHONY: sync-app sync-check
-
-sync-app:
-	@echo "🔄 Syncing repo app → role..."
-	rm -rf $(ROLE_APP_DIR)
-	mkdir -p $(ROLE_APP_DIR)
-	cp -r $(REPO_APP_DIR)/* $(ROLE_APP_DIR)/
-	@echo "✅ Sync complete."
-
-sync-check:
-	@echo "📂 Checking role app directory..."
-	ls -l $(ROLE_APP_DIR)
-
-# ----------------------------------------
 # Systemctl wrappers (run via Ansible)
 # ----------------------------------------
-
-SERVICE=pi-log.service
-INVENTORY=inventory.ini
-
-.PHONY: restart status logs tail stop start
 
 start:
 	ansible -i $(INVENTORY) all -m systemd -a "name=$(SERVICE) state=started"

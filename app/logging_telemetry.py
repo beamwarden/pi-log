@@ -141,12 +141,28 @@ class TelemetryHandler(logging.Handler):
         # Include structured extras
         for key, value in record.__dict__.items():
             if key not in (
-                "args", "asctime", "created", "exc_info", "exc_text",
-                "filename", "funcName", "levelname", "levelno",
-                "lineno", "module", "msecs", "message", "msg",
-                "name", "pathname", "process", "processName",
-                "relativeCreated", "stack_info", "thread",
-                "threadName"
+                "args",
+                "asctime",
+                "created",
+                "exc_info",
+                "exc_text",
+                "filename",
+                "funcName",
+                "levelname",
+                "levelno",
+                "lineno",
+                "module",
+                "msecs",
+                "message",
+                "msg",
+                "name",
+                "pathname",
+                "process",
+                "processName",
+                "relativeCreated",
+                "stack_info",
+                "thread",
+                "threadName",
             ):
                 event[key] = value
 

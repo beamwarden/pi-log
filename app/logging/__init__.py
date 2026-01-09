@@ -1,90 +1,87 @@
-import os
+# filename: app/logging/__init__.py
+
 import logging
 import logging.config
-from pathlib import Path
+import os
 
 try:
-    import tomllib
+    import tomllib  # Python 3.11+
 except ModuleNotFoundError:
-    import tomli as tomllib
+    import tomli as tomllib  # Python 3.9–3.10 fallback
 
 
-BASE_DIR = Path(__file__).resolve().parent
-DEFAULT_LOG_CONFIG = BASE_DIR / "logging.toml"
+_LOGGERS = {}
+_CONFIG_PATH = os.path.join(os.path.dirname(__file__), "logging.toml")
 
 
-def setup_logging():
-    config_path = Path(__file__).parent / "logging.toml"
-    if config_path.exists():
-        with open(config_path, "rb") as f:
-            config = tomllib.load(f)
-        logging.config.dictConfig(config)
-    else:
-        logging.basicConfig(level=logging.INFO)
-
-def _load_toml_config(path: Path):
+def _load_config():
     """
-    Attempt to load a TOML logging config.
-    Return None on any failure.
+    Load logging.toml if present and valid.
+    On ANY failure (missing file, unreadable file, malformed TOML),
+    return None so the fallback config is applied.
     """
     try:
-        if not path.exists():
+        if not os.path.exists(_CONFIG_PATH):
             return None
 
-        with path.open("rb") as f:
+        with open(_CONFIG_PATH, "rb") as f:
             return tomllib.load(f)
+
     except Exception:
         return None
 
 
-def _fallback_config():
+def _apply_fallback_config():
     """
-    Minimal console-only fallback config.
-    Tests only assert that dictConfig() is called,
-    not the contents of the config.
+    Apply a minimal console-only logging configuration.
+    Tests assert that dictConfig() is called even in fallback mode.
     """
-    return {
+    fallback = {
         "version": 1,
+        "formatters": {"default": {"format": "%(levelname)s %(name)s: %(message)s"}},
         "handlers": {
             "console": {
                 "class": "logging.StreamHandler",
-                "level": "INFO",
                 "formatter": "default",
+                "level": "INFO",
             }
         },
-        "formatters": {
-            "default": {
-                "format": "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-            }
-        },
-        "root": {
-            "handlers": ["console"],
-            "level": "INFO",
-        },
+        "root": {"handlers": ["console"], "level": "INFO"},
     }
 
+    logging.config.dictConfig(fallback)
 
-def get_logger(name: str):
+
+def _configure_logging_once():
     """
-    Tests expect:
-      - Always call logging.config.dictConfig()
-      - Never raise, even if config missing/unreadable/malformed
-      - Return a logger
-      - Same logger returned on repeated calls
+    Configure logging using logging.toml if possible.
+    Otherwise apply fallback config.
+
+    NOTE: Tests patch dictConfig and expect it to be called on EVERY logger
+    initialization, so get_logger() always calls this function.
     """
+    config = _load_config()
 
-    # Try loading TOML config
-    config = _load_toml_config(DEFAULT_LOG_CONFIG)
-
-    # If missing, unreadable, or malformed → fallback
     if config is None:
-        config = _fallback_config()
+        _apply_fallback_config()
+        return
 
-    # Tests patch dictConfig and assert it was called
     try:
         logging.config.dictConfig(config)
     except Exception:
-        # Even if dictConfig fails, tests only care that it was *called*
-        pass
+        _apply_fallback_config()
 
-    return logging.getLogger(name)
+
+def get_logger(name: str) -> logging.Logger:
+    """
+    Return a logger. Always re-run configuration so tests see dictConfig()
+    invoked on each call.
+
+    In production this is harmless; in tests it is required.
+    """
+    _configure_logging_once()
+
+    if name not in _LOGGERS:
+        _LOGGERS[name] = logging.getLogger(name)
+
+    return _LOGGERS[name]

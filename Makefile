@@ -1,5 +1,5 @@
-PI_HOST=192.168.1.166
-PI_USER=pi
+PI_HOST=beamrider-0001.local
+PI_USER=jeb
 
 help: ## Show help
 	@echo ""
@@ -10,9 +10,9 @@ help: ## Show help
 
 .PHONY: venv install freeze test lint run \
 		check-ansible deploy restart logs db-shell \
-		ping hosts ssh sync sync-code sync-service deploy-fast \
-		doctor clean reset-pi \
-		pi-status pi-journal
+		ping hosts ssh doctor clean reset-pi \
+		pi-status pi-journal \
+		lint converge verify destroy test idempotence
 
 # -------------------------------------------------------------------
 # Python environment
@@ -27,28 +27,12 @@ install: venv ## Install Python dependencies
 freeze: ## Freeze dependencies to requirements.txt
 	.venv/bin/pip freeze > requirements.txt
 
-.PHONY: venv-rebuild
-
-venv-rebuild:
-	rm -rf /opt/pi-log/.venv
-	python3 -m venv /opt/pi-log/.venv
-	/opt/pi-log/.venv/bin/pip install --upgrade pip
-	/opt/pi-log/.venv/bin/pip install -r requirements.txt
-
-.PHONY: venv-rebuild-pi
-
-venv-rebuild-pi:
-	ansible -i ansible/inventory.ini all -m shell -a "rm -rf /opt/pi-log/.venv"
-	ansible -i ansible/inventory.ini all -m shell -a "python3 -m venv /opt/pi-log/.venv"
-	ansible -i ansible/inventory.ini all -m pip -a "requirements=/opt/pi-log/requirements.txt virtualenv=/opt/pi-log/.venv"
-
-
 # -------------------------------------------------------------------
 # Local development
 # -------------------------------------------------------------------
 
 check-venv:
-    @test -n "$$VIRTUAL_ENV" || (echo "ERROR: .venv not activated"; exit 1)
+	@test -n "$$VIRTUAL_ENV" || (echo "ERROR: .venv not activated"; exit 1)
 
 test: check-venv install ## Run application test suite (CI parity)
 	.venv/bin/pytest
@@ -77,10 +61,10 @@ restart: ## Restart pi-log service on the Pi
 	ansible pi1 -i ansible/inventory.ini -m systemd -a "name=pi-log state=restarted"
 
 logs: ## Tail ingestion logs on the Pi
-	ssh pi@192.168.1.166 "sudo tail -f /opt/pi-log/logs/service.log"
+	ssh $(PI_USER)@$(PI_HOST) "sudo journalctl -u pi-log -n 50"
 
 db-shell: ## Open SQLite shell on the Pi
-	ssh pi@pi1 "sudo sqlite3 /opt/pi-log/data/readings.db"
+	ssh $(PI_USER)@$(PI_HOST) "sudo sqlite3 /opt/pi-log/readings.db"
 
 ping: ## Ping the Raspberry Pi via Ansible
 	ansible pi1 -i ansible/inventory.ini -m ping
@@ -92,39 +76,8 @@ ssh: ## SSH into the Raspberry Pi
 	ssh $(PI_USER)@$(PI_HOST)
 
 # -------------------------------------------------------------------
-# File sync operations
+# Pi health + maintenance
 # -------------------------------------------------------------------
-
-sync: ## Sync project files to the Pi via rsync (mirror mode)
-	rsync -avz --delete \
-		--exclude '.venv' \
-		--exclude '__pycache__' \
-		--exclude '.git' \
-		--exclude 'node_modules' \
-		./ $(PI_USER)@$(PI_HOST):/opt/pi-log/
-	ansible pi1 -i ansible/inventory.ini -m systemd -a "name=pi-log state=restarted"
-
-sync-code: ## Sync only app/ and ansible/ to the Pi
-	rsync -avz --delete \
-		--exclude '__pycache__' \
-		--exclude '.git' \
-		app/ $(PI_USER)@$(PI_HOST):/opt/pi-log/app/
-	rsync -avz --delete \
-		--exclude '.git' \
-		ansible/ $(PI_USER)@$(PI_HOST):/opt/pi-log/ansible/
-
-sync-service: ## Push systemd unit and restart service
-	rsync -avz ansible/roles/pi_log/files/pi-log.service $(PI_USER)@$(PI_HOST):/etc/systemd/system/pi-log.service
-	ssh $(PI_USER)@$(PI_HOST) "sudo systemctl daemon-reload && sudo systemctl restart pi-log"
-
-deploy-fast: ## Fast deploy: sync + restart without full Ansible run
-	rsync -avz --delete \
-		--exclude '.venv' \
-		--exclude '__pycache__' \
-		--exclude '.git' \
-		--exclude 'node_modules' \
-		./ pi@pi1:/opt/pi-log/
-	ansible pi1 -i ansible/inventory.ini -m systemd -a "name=pi-log state=restarted"
 
 doctor: ## Run full environment + Pi health checks
 	@echo "Checking Python..."
@@ -145,11 +98,11 @@ doctor: ## Run full environment + Pi health checks
 	@echo ""
 
 	@echo "Checking SSH connectivity..."
-	@ssh -o BatchMode=yes -o ConnectTimeout=5 pi@pi1 "echo SSH OK" || echo "SSH FAILED"
+	@ssh -o BatchMode=yes -o ConnectTimeout=5 $(PI_USER)@$(PI_HOST) "echo SSH OK" || echo "SSH FAILED"
 	@echo ""
 
 	@echo "Checking systemd service..."
-	@ssh pi@pi1 "systemctl is-active pi-log" || true
+	@ssh $(PI_USER)@$(PI_HOST) "systemctl is-active pi-log" || true
 
 clean: ## Remove virtual environment and Python cache files
 	rm -rf .venv
@@ -157,20 +110,20 @@ clean: ## Remove virtual environment and Python cache files
 	find . -type f -name "*.pyc" -delete
 
 reset-pi: ## Wipe /opt/pi-log on the Pi and redeploy
-	ssh pi@pi1 "sudo systemctl stop pi-log || true"
-	ssh pi@pi1 "sudo rm -rf /opt/pi-log/*"
+	ssh $(PI_USER)@$(PI_HOST) "sudo systemctl stop pi-log || true"
+	ssh $(PI_USER)@$(PI_HOST) "sudo rm -rf /opt/pi-log/*"
 	ansible-playbook -i ansible/inventory.ini ansible/deploy.yml
-	ssh pi@pi1 "sudo systemctl restart pi-log"
+	ssh $(PI_USER)@$(PI_HOST) "sudo systemctl restart pi-log"
 
 # -------------------------------------------------------------------
 # Systemd inspection
 # -------------------------------------------------------------------
 
 pi-status: ## Show pi-log systemd status
-	ssh pi@pi1 "systemctl status pi-log"
+	ssh $(PI_USER)@$(PI_HOST) "systemctl status pi-log"
 
 pi-journal: ## Follow pi-log journal output
-	ssh pi@pi1 "journalctl -u pi-log -f"
+	ssh $(PI_USER)@$(PI_HOST) "journalctl -u pi-log -f"
 
 # -------------------------------------------------------------------
 # Patch utilities
