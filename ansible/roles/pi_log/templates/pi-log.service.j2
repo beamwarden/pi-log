@@ -10,7 +10,9 @@ WorkingDirectory=/opt/pi-log
 
 Environment=PYTHONPATH=/opt/pi-log
 
-ExecStart=/opt/pi-log/.venv/bin/python3.11 -m app.ingestion_loop --config /opt/pi-log/config.toml
+ExecStart=/opt/pi-log/.venv/bin/python3.11 -m app.ingestion.geiger_reader \
+--config /etc/pi-log/config.toml
+
 
 Restart=always
 RestartSec=5
