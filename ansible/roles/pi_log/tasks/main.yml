@@ -1,7 +1,15 @@
 # filename: ansible/roles/pi_log/tasks/main.yml
 ---
 
-- name: Ensure /opt/pi-log exists
+# --------------------------------------------------------------------
+# 0. Hard blow‑out: remove /opt/pi-log entirely, then recreate it clean
+# --------------------------------------------------------------------
+- name: Remove /opt/pi-log completely
+  ansible.builtin.file:
+    path: /opt/pi-log
+    state: absent
+
+- name: Recreate /opt/pi-log directory
   ansible.builtin.file:
     path: /opt/pi-log
     state: directory
@@ -9,24 +17,9 @@
     group: root
     mode: "0755"
 
-- name: Blow out contents of /opt/pi-log
-  ansible.builtin.file:
-    path: /opt/pi-log
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-    recurse: true
-
-- name: Recreate /opt/pi-log after blowout
-  ansible.builtin.file:
-    path: /opt/pi-log
-    state: directory
-    owner: root
-    group: root
-    mode: "0755"
-
-# Canonical repo sync — the ONLY sync
+# --------------------------------------------------------------------
+# 1. Canonical repo sync — the ONLY sync
+# --------------------------------------------------------------------
 - name: Sync application source to /opt/pi-log
   ansible.posix.synchronize:
     src: "{{ playbook_dir | dirname }}/"
@@ -50,6 +43,9 @@
       - "--exclude=.DS_Store"
       - "--exclude=*.log"
 
+# --------------------------------------------------------------------
+# 2. Config directory + config.toml
+# --------------------------------------------------------------------
 - name: Ensure config directory exists
   ansible.builtin.file:
     path: /etc/pi-log
@@ -67,7 +63,10 @@
     mode: "0644"
   notify: Restart pi-log service
 
-- name: Ensure virtual environment exists
+# --------------------------------------------------------------------
+# 3. Virtual environment + dependencies
+# --------------------------------------------------------------------
+- name: Create virtual environment
   ansible.builtin.command:
     cmd: python3.11 -m venv /opt/pi-log/.venv
     creates: /opt/pi-log/.venv/bin/activate
@@ -78,6 +77,9 @@
     virtualenv: /opt/pi-log/.venv
   notify: Restart pi-log service
 
+# --------------------------------------------------------------------
+# 4. Systemd service deployment
+# --------------------------------------------------------------------
 - name: Deploy systemd service
   ansible.builtin.template:
     src: pi-log.service.j2
@@ -89,15 +91,9 @@
     - Reload systemd
     - Restart pi-log service
 
-- name: Restart pi-log service after deploy
-  ansible.builtin.systemd:
-    name: pi-log
-    state: restarted
-    enabled: true
-
-# -------------------------
+# --------------------------------------------------------------------
 # Handlers
-# -------------------------
+# --------------------------------------------------------------------
 - name: Reload systemd
   ansible.builtin.systemd:
     daemon_reload: true

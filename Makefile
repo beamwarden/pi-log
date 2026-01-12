@@ -92,13 +92,13 @@ deploy: ## Deploy to Raspberry Pi via Ansible
 # ------------------------------------------------------------
 
 restart: ## Restart pi-log service on the Pi
-	ansible pi1 -i $(INVENTORY) -m systemd -a "name=$(SERVICE) state=restarted"
+	ansible beamrider-0001 -i $(INVENTORY) -m systemd -a "name=$(SERVICE) state=restarted"
 
 start: ## Start pi-log service
-	ansible pi1 -i $(INVENTORY) -m systemd -a "name=$(SERVICE) state=started"
+	ansible beamrider-0001 -i $(INVENTORY) -m systemd -a "name=$(SERVICE) state=started"
 
 stop: ## Stop pi-log service
-	ansible pi1 -i $(INVENTORY) -m systemd -a "name=$(SERVICE) state=stopped"
+	ansible beamrider-0001 -i $(INVENTORY) -m systemd -a "name=$(SERVICE) state=stopped"
 
 status: ## Show pi-log systemd status
 	ssh $(PI_USER)@$(PI_HOST) "systemctl status $(SERVICE)"
@@ -117,7 +117,7 @@ db-shell: ## Open SQLite shell on the Pi
 # ------------------------------------------------------------
 
 ping: ## Ping the Raspberry Pi via Ansible
-	ansible pi1 -i $(INVENTORY) -m ping
+	ansible beamrider-0001 -i $(INVENTORY) -m ping
 
 hosts: ## Show parsed Ansible inventory
 	ansible-inventory -i $(INVENTORY) --list

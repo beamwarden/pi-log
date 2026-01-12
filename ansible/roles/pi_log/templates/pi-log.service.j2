@@ -13,12 +13,10 @@ WorkingDirectory=/opt/pi-log
 # Ensure Python resolves the app/ package correctly
 Environment=PYTHONPATH=/opt/pi-log
 
-# API URL and token intentionally disabled (false)
-# This matches the decision made this morning.
 ExecStart=/opt/pi-log/.venv/bin/python3.11 -m app.ingestion.geiger_reader \
   --device {{ pi_log_serial_device }} \
   --db {{ pi_log_db_path }} \
-  --api-url "" \
+  --api-url {{ pi_log_push_url }} \
   --api-token "" \
   --push-interval 1 \
   --device-id {{ inventory_hostname }}
