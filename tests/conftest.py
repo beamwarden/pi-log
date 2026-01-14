@@ -1,4 +1,15 @@
 # filename: tests/conftest.py
+import sys
+from pathlib import Path
+
+print(">>> LOADING CONFTEST:", __file__)
+print(">>> sys.path BEFORE:", sys.path)
+
+ROOT = Path(__file__).resolve().parents[1]
+if str(ROOT) not in sys.path:
+    sys.path.insert(0, str(ROOT))
+
+
 
 import os  # noqa: F401
 import sqlite3
@@ -9,7 +20,7 @@ from fastapi.testclient import TestClient
 from app.api import app, get_store
 from app.settings import Settings
 from app.sqlite_store import initialize_db, insert_record
-from app.api_client import PushClient
+from app.ingestion.api_client import PushClient
 from app.models import GeigerRecord
 
 
@@ -21,7 +32,7 @@ from app.models import GeigerRecord
 @pytest.fixture(autouse=True)
 def _patch_serial_reader():
     # Patch the canonical serial reader path
-    with patch("app.serial_reader.serial_reader.SerialReader") as mock_reader:
+    with patch("app.ingestion.serial_reader.SerialReader") as mock_reader:
         mock_reader.return_value = MagicMock()
         yield
 
@@ -73,8 +84,13 @@ def db_with_records(temp_db):
 
 
 @pytest.fixture
-def push_client():
-    return PushClient(api_url="http://example.com", api_token="TOKEN")
+def push_client(tmp_path):
+    return PushClient(
+        api_url="http://example.com",
+        api_token="TOKEN",
+        device_id="TEST-DEVICE",
+        db_path=str(tmp_path / "test.db"),
+        )
 
 
 # ---------------------------------------------------------------------------
