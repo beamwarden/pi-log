@@ -18,9 +18,12 @@ ExecStart=/opt/pi-log/.venv/bin/python3.11 -m app.ingestion.geiger_reader \
     --baudrate "{{ pi_log_baudrate }}" \
     --device-type "{{ pi_log_device_type }}" \
     --db "{{ pi_log_db_path }}" \
-    --api-url "{{ pi_log_api_url }}" \
+    --device-id "{{ pi_log_device_id }}" \
+    {% if pi_log_push_enabled %}
+    --api-url "{{ pi_log_push_url }}" \
     --api-token "{{ pi_log_api_token }}" \
-    --device-id "{{ pi_log_device_id }}"
+    {% endif %}
+
 
 # Kill any stale serial users after exit
 ExecStopPost=/bin/sh -c '/usr/bin/fuser -k "{{ pi_log_device }}" || true'

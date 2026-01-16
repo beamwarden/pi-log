@@ -16,8 +16,8 @@
 - name: Ensure MightyOhm serial device is not held open
   ansible.builtin.command:
     cmd: fuser -k /dev/mightyohm
-  register: mightyohm_fuser_result
-  changed_when: mightyohm_fuser_result.rc == 0
+  register: pi_log_mightyohm_fuser_result
+  changed_when: pi_log_mightyohm_fuser_result.rc == 0
   failed_when: false
 
 # --- CRITICAL: remove ANY system-level ghost modules -----------------

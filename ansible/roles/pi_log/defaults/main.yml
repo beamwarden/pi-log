@@ -13,8 +13,8 @@ pi_log_log_level: "INFO"
 
 # Push configuration
 pi_log_push_enabled: true
-pi_log_api_url: "http://keep-0001.local:8000/api/readings/geiger/push"
+pi_log_api_url: ""
 pi_log_api_token: ""
 
 # Identity
-pi_log_device_id: "{{ inventory_hostname }}"
+pi_log_device_id: ""

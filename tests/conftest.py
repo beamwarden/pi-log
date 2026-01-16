@@ -1,15 +1,4 @@
 # filename: tests/conftest.py
-import sys
-from pathlib import Path
-
-print(">>> LOADING CONFTEST:", __file__)
-print(">>> sys.path BEFORE:", sys.path)
-
-ROOT = Path(__file__).resolve().parents[1]
-if str(ROOT) not in sys.path:
-    sys.path.insert(0, str(ROOT))
-
-
 
 import os  # noqa: F401
 import sqlite3
@@ -31,7 +20,6 @@ from app.models import GeigerRecord
 
 @pytest.fixture(autouse=True)
 def _patch_serial_reader():
-    # Patch the canonical serial reader path
     with patch("app.ingestion.serial_reader.SerialReader") as mock_reader:
         mock_reader.return_value = MagicMock()
         yield
@@ -57,7 +45,7 @@ def fake_settings(tmp_path):
 
 
 # ---------------------------------------------------------------------------
-# SQLITE FIXTURES (canonical geiger_readings only)
+# SQLITE FIXTURES
 # ---------------------------------------------------------------------------
 
 
@@ -90,7 +78,7 @@ def push_client(tmp_path):
         api_token="TOKEN",
         device_id="TEST-DEVICE",
         db_path=str(tmp_path / "test.db"),
-        )
+    )
 
 
 # ---------------------------------------------------------------------------

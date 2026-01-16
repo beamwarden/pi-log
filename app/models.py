@@ -43,7 +43,9 @@ class GeigerRecord:
     # Generic dict serializer (used by PushClient)
     # ------------------------------------------------------------
     def to_dict(self) -> Dict[str, Any]:
-        return asdict(self)
+        d = asdict(self)
+        d["timestamp"] = self.timestamp.isoformat()
+        return d
 
     # ------------------------------------------------------------
     # Construct from parsed CSV
@@ -78,7 +80,7 @@ class GeigerRecord:
             "counts_per_second": self.counts_per_second,
             "counts_per_minute": self.counts_per_minute,
             "microsieverts_per_hour": self.microsieverts_per_hour,
-            "mode": self.mode,
+            "mode": self.mode.upper(),
             "device_id": self.device_id,
         }
 

@@ -15,11 +15,13 @@ def test_load_config_missing_file_returns_empty_dict(tmp_path):
 
 def test_load_config_valid_toml(tmp_path):
     config_path = tmp_path / "config.toml"
-    config_path.write_text(textwrap.dedent("""
+    config_path.write_text(
+        textwrap.dedent("""
         [serial]
         device = "/dev/ttyUSB0"
         baudrate = 9600
-    """))
+    """)
+    )
 
     result = load_config(config_path)
     assert isinstance(result, SettingsNamespace)

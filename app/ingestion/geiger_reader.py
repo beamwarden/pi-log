@@ -11,7 +11,7 @@ from app.ingestion.serial_reader import SerialReader
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="geiger_reader",
-        description="Ingestion loop for MightyOhm Geiger counter readings."
+        description="Ingestion loop for MightyOhm Geiger counter readings.",
     )
 
     parser.add_argument("--device", required=True, type=str)
@@ -39,7 +39,9 @@ def main() -> int:
     logging.info(f"Device type: {args.device_type}")
     logging.info(f"DB path: {args.db}")
     logging.info(f"API URL: {args.api_url}")
-    logging.info("API token: <empty>" if args.api_token == "" else "API token: <provided>")
+    logging.info(
+        "API token: <empty>" if args.api_token == "" else "API token: <provided>"
+    )
     logging.info(f"Device ID: {args.device_id}")
 
     reader = SerialReader(
