@@ -5,7 +5,7 @@ from __future__ import annotations
 import sqlite3
 import requests
 from datetime import datetime, timezone
-from typing import Any, Dict, Sequence
+from typing import Any, Dict
 
 from app.models import GeigerRecord
 
@@ -19,7 +19,9 @@ class PushClient:
       - marks them pushed on success
     """
 
-    def __init__(self, api_url: str, api_token: str, device_id: str, db_path: str) -> None:
+    def __init__(
+        self, api_url: str, api_token: str, device_id: str, db_path: str
+    ) -> None:
         if not api_url:
             raise ValueError("PushClient requires a non-empty api_url")
 
@@ -92,17 +94,16 @@ class PushClient:
         Push a single GeigerRecord to the ingestion endpoint.
         Returns True on success.
         """
-
         headers = {}
         if self.api_token:
             headers["Authorization"] = f"Bearer {self.api_token}"
 
-        resp = requests.post(self.ingest_url, json=[record.to_dict()], headers=headers)
-        resp.raise_for_status()
-
         try:
-            data = resp.json()
-            return isinstance(data, Sequence) and len(data) > 0
+            resp = requests.post(
+                self.ingest_url, json=record.to_logexp_payload(), headers=headers
+            )
+            resp.raise_for_status()
+            return True
         except Exception:
             return False
 

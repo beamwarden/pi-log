@@ -2,8 +2,9 @@
 
 from __future__ import annotations
 
+import logging
 import time
-from typing import Any, Callable, Dict, Optional
+from typing import Any, Callable, cast, Dict, Optional
 import serial
 
 from app.ingestion.csv_parser import parse_geiger_csv
@@ -42,13 +43,17 @@ class SerialReader:
         if not raw:
             return ""
 
-        return raw.decode("utf-8", errors="ignore").strip()
+        decoded = cast(str, raw.decode("utf-8", errors="ignore"))
+        return decoded.strip()
 
     def run(self) -> None:
         while True:
             try:
                 raw = self.read_line()
+                logging.info(f"RAW: {raw!r}")
+
                 parsed = parse_geiger_csv(raw)
+                logging.info(f"PARSED: {parsed}")
 
                 if parsed is not None and self._handle_parsed is not None:
                     self._handle_parsed(parsed)
@@ -56,5 +61,6 @@ class SerialReader:
             except (KeyboardInterrupt, StopIteration):
                 break
 
-            except Exception:
+            except Exception as e:
+                logging.error(f"Error in serial loop: {e}")
                 time.sleep(0.1)
