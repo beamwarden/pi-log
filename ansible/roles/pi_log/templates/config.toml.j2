@@ -1,4 +1,4 @@
-# ansible/roles/pi_log/templates/config.toml.j2
+# filename: ansible/roles/pi_log/templates/config.toml.j2
 
 [serial]
 device = "/dev/ttyUSB0"
@@ -36,9 +36,13 @@ base_url = ""
 token = ""
 
 [push]
-enabled = false
-url = ""
-api_key = ""
+enabled = {{ pi_log_push_enabled | lower }}
+url = "{{ pi_log_push_url }}"
+api_key = "{{ pi_log_api_token }}"
+
+[device]
+name = "{{ pi_log_device_id }}"
+token = "{{ pi_log_device_token }}"
 
 [telemetry]
 enabled = false

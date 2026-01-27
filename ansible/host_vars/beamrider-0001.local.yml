@@ -2,5 +2,5 @@
 
 pi_log_push_enabled: true
 pi_log_push_url: "http://keep-0001.local:8000/api/geiger/push"
-pi_log_api_token: "pi-log-placeholder-token"
+pi_log_api_token: "bUN096GU2NadLRXEimB2Ofom08cfdjGyi5UOUk3WXIo"
 pi_log_device_id: "{{ inventory_hostname }}"
