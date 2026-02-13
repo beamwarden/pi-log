@@ -1,0 +1,21 @@
+# filename: /etc/systemd/system/pi-log.service
+[Unit]
+Description=Pi Log Ingestion (Container)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Restart=always
+RestartSec=2
+
+# Mount config and expose serial device
+ExecStart=/usr/bin/docker run --rm \
+    --name pi-log \
+    --device=/dev/ttyUSB0 \
+    -v /opt/pi-log/config.toml:/app/config.toml:ro \
+    beamwarden/pi-log:latest
+
+ExecStop=/usr/bin/docker stop pi-log
+
+[Install]
+WantedBy=multi-user.target
