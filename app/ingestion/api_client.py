@@ -1,4 +1,4 @@
-# filename: app/api_client.py
+# filename: pi-log/app/ingestion/api_client.py
 
 from __future__ import annotations
 
@@ -17,10 +17,19 @@ class PushClient:
       - writes them to SQLite
       - pushes them immediately to the ingestion API
       - marks them pushed on success
+
+    Device identity headers (X-Device-Name, X-Device-Token) are added to every
+    push request so Beamwarden can authenticate the device.
     """
 
     def __init__(
-        self, api_url: str, api_token: str, device_id: str, db_path: str
+        self,
+        api_url: str,
+        api_token: str,
+        device_id: str,
+        db_path: str,
+        device_name: str | None = None,
+        device_token: str | None = None,
     ) -> None:
         if not api_url:
             raise ValueError("PushClient requires a non-empty api_url")
@@ -29,6 +38,10 @@ class PushClient:
         self.api_token = api_token or ""
         self.device_id = device_id
         self.db_path = db_path
+
+        # Device identity for Beamwarden
+        self.device_name = device_name or device_id
+        self.device_token = device_token or ""
 
         self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self._conn.execute("PRAGMA journal_mode=WAL;")
@@ -94,13 +107,23 @@ class PushClient:
         Push a single GeigerRecord to the ingestion endpoint.
         Returns True on success.
         """
-        headers = {}
+
+        # Device identity headers for Beamwarden
+        headers = {
+            "X-Device-Name": self.device_name,
+            "X-Device-Token": self.device_token,
+        }
+
+        # Legacy LogExp token (optional)
         if self.api_token:
             headers["Authorization"] = f"Bearer {self.api_token}"
 
         try:
             resp = requests.post(
-                self.ingest_url, json=record.to_logexp_payload(), headers=headers
+                self.ingest_url,
+                json=record.to_logexp_payload(),
+                headers=headers,
+                timeout=5,
             )
             resp.raise_for_status()
             return True

@@ -1,6 +1,16 @@
 # filename: ansible/host_vars/beamrider-0001.yml
 
+# pi-log should continue pushing to KEEP
 pi_log_push_enabled: true
+
+# KEEP is the ingestion endpoint
 pi_log_push_url: "http://keep-0001.local:8000/api/geiger/push"
-pi_log_api_token: "pi-log-placeholder-token"
-pi_log_device_id: "{{ inventory_hostname }}"
+
+# Legacy LogExp token (unused for Beamwarden)
+pi_log_api_token: ""
+
+# Device identity for Beamwarden
+pi_log_device_id: "beamrider-0001"
+
+# Will be replaced by encrypted token after provisioning
+pi_log_device_token: "bUN096GU2NadLRXEimB2Ofom08cfdjGyi5UOUk3WXIo"

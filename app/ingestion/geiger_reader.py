@@ -7,6 +7,8 @@ import sys
 from app.ingestion.api_client import PushClient
 from app.ingestion.serial_reader import SerialReader
 from app.ingestion.watchdog import WatchdogSerialReader
+from app.health import start_health_server
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -32,6 +34,7 @@ def main() -> int:
         level=logging.INFO,
         format="%(asctime)s [%(levelname)s] %(message)s",
     )
+    start_health_server()
 
     logging.info("Starting ingestion agent")
     logging.info(f"Device: {args.device}")
