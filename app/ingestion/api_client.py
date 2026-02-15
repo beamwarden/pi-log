@@ -102,62 +102,33 @@ class PushClient:
     # Push logic
     # ------------------------------------------------------------
 
-def _push_single(self, record: GeigerRecord) -> bool:
-    """
-    Push a single GeigerRecord to the ingestion endpoint.
-    Returns True on success.
-    """
-
-    # Device identity headers for Beamwarden
-    headers = {
-        "X-Device-Name": self.device_name,
-        "X-Device-Token": self.device_token,
-    }
-
-    # Legacy LogExp token (optional)
-    if self.api_token:
-        headers["Authorization"] = f"Bearer {self.api_token}"
-
-    # New unified Beamwarden ingestion schema
-    payload = {
-        "counts_per_second": record.counts_per_second,
-        "counts_per_minute": record.counts_per_minute,
-        "microsieverts_per_hour": record.microsieverts_per_hour,
-        "mode": record.mode,
-        "device_id": record.device_id,
-        "timestamp": record.timestamp.isoformat(),
-    }
-
-    try:
-        resp = requests.post(
-            self.ingest_url,
-            json=payload,
-            headers=headers,
-            timeout=5,
-        )
-        resp.raise_for_status()
-        return True
-    except Exception:
-        return False
+    def _push_single(self, record: GeigerRecord) -> bool:
         """
         Push a single GeigerRecord to the ingestion endpoint.
         Returns True on success.
         """
 
-        # Device identity headers for Beamwarden
         headers = {
             "X-Device-Name": self.device_name,
             "X-Device-Token": self.device_token,
         }
 
-        # Legacy LogExp token (optional)
         if self.api_token:
             headers["Authorization"] = f"Bearer {self.api_token}"
+
+        payload = {
+            "counts_per_second": record.counts_per_second,
+            "counts_per_minute": record.counts_per_minute,
+            "microsieverts_per_hour": record.microsieverts_per_hour,
+            "mode": record.mode,
+            "device_id": record.device_id,
+            "timestamp": record.timestamp.isoformat(),
+        }
 
         try:
             resp = requests.post(
                 self.ingest_url,
-                json=record.to_logexp_payload(),
+                json=payload,
                 headers=headers,
                 timeout=5,
             )

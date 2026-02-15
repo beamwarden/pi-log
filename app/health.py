@@ -15,7 +15,7 @@ def health_check() -> Dict[str, str]:
 
 
 class HealthHandler(BaseHTTPRequestHandler):
-    def do_GET(self):
+    def do_GET(self) -> None:
         if self.path == "/health":
             payload = json.dumps(health_check()).encode("utf-8")
             self.send_response(200)
