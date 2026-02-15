@@ -1,193 +1,122 @@
-# pi-log
+# pi‑log — Portable Multi‑Sensor Logging Hub
 
-[![CI](https://github.com/gaspode-wonder/pi-log/actions/workflows/ci.yml/badge.svg)](https://github.com/gaspode-wonder/pi-log/actions/workflows/ci.yml)
-[![Release](https://github.com/gaspode-wonder/pi-log/actions/workflows/release.yml/badge.svg)](https://github.com/gaspode-wonder/pi-log/actions/workflows/release.yml)
+pi‑log is a **containerized, hardware‑agnostic ingestion hub** for Beamrider nodes.
+It collects readings from any number of sensors (serial, I²C, SPI, USB, network, or virtual), stores them locally, and pushes structured telemetry to Beamwarden.
 
-pi-log is a Raspberry Pi–based serial ingestion service for the LogExp radiation
-monitoring system. It reads CSV-formatted data from a MightyOhm Geiger Counter,
-stores readings locally for durability, and forwards them to the LogExp web API.
-
-The project emphasizes deterministic behavior, clear component boundaries,
-testability, and reproducible deployment.
-
----
-
-## Project Overview
-
-This repository contains:
-
-- A serial reader for the MightyOhm Geiger Counter
-- A local SQLite database for durable storage
-- A push client that forwards readings to the LogExp web API
-- A systemd service for reliable, unattended operation
-- Documentation and setup scripts
-
-The Pi reads CSV-formatted lines from the Geiger counter in the following form:
-```t
-CPS, #####, CPM, #####, uSv/hr, ###.##, SLOW|FAST|INST
-```
-Each reading is stored locally and pushed to the LogExp server with retry logic.
+pi‑log is:
+- **Portable** — runs on ARM, x86, Pi, Jetson, NUC, VMs, industrial gateways
+- **Extensible** — sensor drivers are modular Python plugins
+- **Deterministic** — every reading is typed, timestamped, and validated
+- **Reliable** — local queueing, WAL mode, crash‑safe
+- **Fleet‑managed** — deployed and configured by Quasar
 
 ---
 
 ## Features
 
-- Serial ingestion from `/dev/ttyUSB0`
-- CSV parsing (CPS, CPM, uSv/hr, mode)
-- Local SQLite durability
-- Push-first sync model with retry handling
-- systemd integration
-- Minimal runtime dependencies
+### Multi‑Sensor Support
+pi‑log supports any number of sensors simultaneously:
+- Serial devices
+- I²C/SPI peripherals
+- USB HID
+- Network sensors (TCP, UDP, MQTT, HTTP)
+- Virtual/software sensors
 
----
+### Unified Ingestion Schema
+All readings follow the same structure:
 
-## Development and CI Model
-
-Development follows a standard Git workflow.
-
-Changes are made directly in the repository, validated locally, and enforced
-through automated testing and continuous integration. Patch-based workflows are
-not used.
-
-Continuous integration is responsible for:
-
-- Running Python unit and integration tests
-- Enforcing formatting and linting rules
-- Validating behavior against documented contracts
-
-CI is treated as a guardrail to ensure refactors and enhancements remain safe and
-reviewable.
-
----
-
-## Repository Structure
-```tree
-pi-log/
-├── Makefile
-├── README.md
-├── geiger_pi_reader.py
-├── requirements.txt
-├── systemd/
-│   └── geiger.service
-├── scripts/
-│   ├── setup.sh
-│   ├── enable.sh
-│   └── migrate.sh
-├── db/
-│   └── schema.sql
-├── config/
-│   └── example.env
-├── tests/
-│   ├── unit/
-│   ├── integration/
-│   └── ui/
-└── docs/
-    ├── architecture.md
-    ├── api.md
-    ├── ingestion-flow.md
-    ├── troubleshooting.md
-    └── deployment.md
-```
----
-
-## Installation
-
-Run the setup script:
-```bash
-sudo bash scripts/setup.sh
+```json
+{
+  "device_id": "beamrider-0001",
+  "sensor_type": "bme280",
+  "payload": { "temperature_c": 22.4 },
+  "timestamp": "2026-02-15T19:06:00Z"
+}
 ```
 
-This will:
+### Local Queue (SQLite)
+- WAL mode
+- bounded
+- crash‑safe
+- replay on restart
 
-- Install Python dependencies
-- Create required directories
-- Install the systemd service
-- Enable and start the service
+### Container‑First
+pi‑log is distributed as a single container image:
 
----
-
-## Environment Variables
-
-Copy `config/example.env` to `/etc/default/geiger` and adjust as needed:
-```bash
-GEIGER_SERIAL_PORT=/dev/ttyUSB0
-GEIGER_DB_PATH=/var/lib/geiger/geiger.db
-LOGEXP_BASE_URL=https://your-logexp-host
-LOGEXP_API_TOKEN=CHANGE_ME
+```
+docker run -d \
+  --name pi-log \
+  --device /dev/ttyUSB0 \
+  -v /etc/pi-log/config.toml:/app/config.toml:ro \
+  ghcr.io/beamwarden/pi-log:latest
 ```
 
 ---
 
-## Service Management
-```bash
-sudo systemctl status geiger
-sudo systemctl restart geiger
-sudo systemctl stop geiger
+## Configuration
+
+pi‑log is configured via `config.toml`:
+
+```toml
+device_id = "beamrider-0001"
+api_url = "http://keep-0001.local:8000/api/readings"
+device_token = "..."
+
+[[sensor]]
+type = "mightyohm"
+driver = "app.sensors.mightyohm:MightyOhmDriver"
+interval_ms = 1000
+
+[[sensor]]
+type = "tcp-json"
+driver = "app.sensors.tcp_json:TCPJSONDriver"
+host = "192.168.1.50"
+port = 9000
 ```
----
-
-## Data Format
-
-Each reading stored in SQLite includes:
-
-- timestamp (ISO8601)
-- cps (int)
-- cpm (int)
-- usv (float)
-- mode (string)
-- pushed (0/1)
 
 ---
 
-## Documentation
+## Development
 
-The `docs/` directory contains architecture, operational, and troubleshooting
-resources intended for future maintainers.
+### Create a venv
+```
+make dev
+```
 
-### Architecture
-- [System Architecture](docs/architecture.md)
-- [System Overview Diagram](docs/diagrams/system-overview.md)
-- [Shell/pyenv/pre-commit Sequence Diagram](docs/diagrams/sequence.md)
+### Run tests
+```
+make test
+```
 
-### Development & Validation
+### Lint + typecheck
+```
+make lint
+make typecheck
+```
 
-All application changes must pass the documented local validation procedure
-before relying on CI or merging.
-
-See: [Application Validation Procedure](docs/development.md)
-
-The same steps are enforced automatically via GitHub Actions.
-
-### Troubleshooting
-- [Troubleshooting Guide](docs/troubleshooting.md)
-- Known failure modes
-- Diagnostic checklists
-- Environment validation steps
-
-These documents are written to support reproducible development on macOS and
-deployment on Raspberry Pi systems.
+### Run locally
+```
+make run
+```
 
 ---
 
-## Import Path Fix for Raspberry Pi 3
+## Building the Container
 
-Raspberry Pi 3 devices running Python 3.11 require an explicit `.pth` file
-inside the virtual environment to ensure the `app` package is importable
-when launched under systemd.
+```
+make build
+make push
+```
 
-Create the file:
+---
 
-    /opt/pi-log/.venv/lib/python3.11/site-packages/pi_log_path.pth
+## Deployment
 
-With the following content:
-
-    /opt/pi-log
-
-This ensures that `python -m app.ingestion_loop` works consistently under
-systemd, regardless of environment propagation quirks on Pi 3 hardware.
+Deployment is handled by **Quasar**, the Beamwarden fleet control plane.
+pi‑log itself contains **no infrastructure code**.
 
 ---
 
 ## License
 
-MIT
+TBD

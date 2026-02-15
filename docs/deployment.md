@@ -5,7 +5,6 @@
 - Raspberry Pi OS
 - Python 3
 - Systemd
-- Ansible on the control machine
 
 ## Deploy
 

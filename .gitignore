@@ -63,14 +63,3 @@ __pycache__/
 # Pi-specific temp files
 *.swp
 *.swo
-
-# ================================
-#   Ansible
-# ================================
-# Local facts, cache, and retry files
-*.retry
-.cache/
-.fact_cache/
-.ansible/
-ansible/.ansible/
-ansible/collections/

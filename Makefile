@@ -69,6 +69,9 @@ clean: ## Remove venv + Python cache files
 	find . -type d -name "__pycache__" -exec rm -rf {} +
 	find . -type f -name "*.pyc" -delete
 
+clean-pytest:
+	rm -rf .pytest_cache
+
 # ------------------------------------------------------------------------
 # Local Ingestion Agent (run.py + config.toml)
 # ------------------------------------------------------------------------
