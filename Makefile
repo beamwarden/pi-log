@@ -1,15 +1,7 @@
 # filename: Makefile
 # ========================================================================
-# Beamwarden pi-log — Unified Makefile
-# Python Dev • Local Ingestion • Docker • Ansible • Pi Ops
-# ========================================================================
-# This Makefile provides a single, consistent interface for:
-#   - Local development (venv, lint, typecheck, tests)
-#   - Running the ingestion agent locally (via run.py)
-#   - Building + pushing the container image
-#   - Deploying to the Raspberry Pi via Ansible
-#   - Managing the pi-log systemd service on the Pi
-#   - Health checks, logs, and maintenance
+# Beamwarden pi-log — Unified Makefile (Application Only)
+# Python Dev • Local Ingestion • Docker Build/Push • Pi Ops via Quasar
 # ========================================================================
 
 # ------------------------------------------------------------------------
@@ -19,10 +11,6 @@
 PI_HOST        := beamrider-0001.local
 PI_USER        := jeb
 SERVICE        := pi-log
-
-ANSIBLE_DIR    := ansible
-INVENTORY      := $(ANSIBLE_DIR)/inventory
-PLAYBOOK       := $(ANSIBLE_DIR)/deploy.yml
 
 IMAGE          := ghcr.io/beamwarden/pi-log
 TAG            := latest
@@ -85,8 +73,8 @@ clean: ## Remove venv + Python cache files
 # Local Ingestion Agent (run.py + config.toml)
 # ------------------------------------------------------------------------
 
-run: check-venv ## Run ingestion agent locally (via scripts/run_local.sh)
-	./scripts/run_local.sh
+run: check-venv ## Run ingestion agent locally
+	$(VENV)/bin/python run.py
 
 dev-run: run ## Alias for local ingestion run
 
@@ -115,7 +103,7 @@ ci: clean-pyc check-venv ## Full local CI (lint + typecheck + tests)
 	@echo "✔ Local CI passed"
 
 # ------------------------------------------------------------------------
-# Docker Build + Push + Deploy
+# Docker Build + Push + Release
 # ------------------------------------------------------------------------
 
 build: ## Build the pi-log container image
@@ -123,6 +111,13 @@ build: ## Build the pi-log container image
 
 push: ## Push the container image to GHCR
 	docker push $(IMAGE):$(TAG)
+
+publish: build push ## Build and push the container image
+	@echo "✔ Image built and pushed to GHCR"
+
+# Release is now build+push only; deployment is Quasar's job
+release: publish ## Full release (container only)
+	@echo "✔ Container release completed"
 
 run-container: ## Run the container locally (binds config.toml + serial)
 	docker run --rm -it \
@@ -133,41 +128,18 @@ run-container: ## Run the container locally (binds config.toml + serial)
 logs-container: ## Tail logs from a locally running container
 	docker logs -f pi-log
 
-publish: build push ## Build and push the container image
-	@echo "✔ Image built and pushed to GHCR"
-
-release: publish deploy restart ## Full release: build, push, deploy, restart
-	@echo "✔ Full release completed"
-
-
 # ------------------------------------------------------------------------
-# Ansible Deployment
-# ------------------------------------------------------------------------
-
-check-ansible: ## Validate Ansible syntax, inventory, lint, and dry-run
-	ansible-playbook $(PLAYBOOK) --syntax-check
-	ansible-inventory --list >/dev/null
-	ansible-lint $(ANSIBLE_DIR)
-	ansible-playbook $(PLAYBOOK) --check
-
-deploy: ## Deploy to Raspberry Pi via Ansible
-	ansible-playbook $(PLAYBOOK)
-
-ansible-deploy: ## Run ansible/Makefile deploy
-	cd ansible && make deploy
-
-# ------------------------------------------------------------------------
-# Pi Service Management
+# Pi Service Management (via SSH)
 # ------------------------------------------------------------------------
 
 restart: ## Restart pi-log service on the Pi
-	ansible beamrider-0001 -m systemd -a "name=$(SERVICE) state=restarted"
+	ssh $(PI_USER)@$(PI_HOST) "sudo systemctl restart $(SERVICE)"
 
 start: ## Start pi-log service
-	ansible beamrider-0001 -m systemd -a "name=$(SERVICE) state=started"
+	ssh $(PI_USER)@$(PI_HOST) "sudo systemctl start $(SERVICE)"
 
 stop: ## Stop pi-log service
-	ansible beamrider-0001 -m systemd -a "name=$(SERVICE) state=stopped"
+	ssh $(PI_USER)@$(PI_HOST) "sudo systemctl stop $(SERVICE)"
 
 status: ## Show pi-log systemd status
 	ssh $(PI_USER)@$(PI_HOST) "systemctl status $(SERVICE)"
@@ -181,16 +153,12 @@ tail: ## Follow live logs from the Pi
 db-shell: ## Open SQLite shell on the Pi
 	ssh $(PI_USER)@$(PI_HOST) "sudo sqlite3 /var/lib/pi-log/readings.db"
 
-
 # ------------------------------------------------------------------------
 # Pi Health + Maintenance
 # ------------------------------------------------------------------------
 
-ping: ## Ping the Raspberry Pi via Ansible
-	ansible beamrider-0001 -m ping
-
-hosts: ## Show parsed Ansible inventory
-	ansible-inventory --list
+ping: ## Ping the Raspberry Pi
+	ssh $(PI_USER)@$(PI_HOST) "echo ping"
 
 ssh: ## SSH into the Raspberry Pi
 	ssh $(PI_USER)@$(PI_HOST)
@@ -199,16 +167,7 @@ doctor: ## Full environment + Pi health checks
 	@echo "Checking Python..."; python3 --version; echo ""
 	@echo "Checking virtual environment..."; \
 		[ -d ".venv" ] && echo "venv OK" || echo "venv missing"; echo ""
-	@echo "Checking Python dependencies..."; $(VENV)/bin/pip --version; echo ""
-	@echo "Checking Ansible..."; ansible --version; \
-		ansible-inventory --list >/dev/null && echo "Inventory OK"; echo ""
 	@echo "Checking SSH connectivity..."; \
 		ssh -o BatchMode=yes -o ConnectTimeout=5 $(PI_USER)@$(PI_HOST) "echo SSH OK" || echo "SSH FAILED"; echo ""
 	@echo "Checking systemd service..."; \
 		ssh $(PI_USER)@$(PI_HOST) "systemctl is-active $(SERVICE)" || true
-
-reset-pi: ## Wipe /opt/pi-log on the Pi and redeploy
-	ssh $(PI_USER)@$(PI_HOST) "sudo systemctl stop $(SERVICE) || true"
-	ssh $(PI_USER)@$(PI_HOST) "sudo rm -rf /opt/pi-log/*"
-	ansible-playbook $(PLAYBOOK)
-	ssh $(PI_USER)@$(PI_HOST) "sudo systemctl restart $(SERVICE)"
