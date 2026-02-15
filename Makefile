@@ -115,7 +115,7 @@ ci: clean-pyc check-venv ## Full local CI (lint + typecheck + tests)
 	@echo "✔ Local CI passed"
 
 # ------------------------------------------------------------------------
-# Docker Build + Push
+# Docker Build + Push + Deploy
 # ------------------------------------------------------------------------
 
 build: ## Build the pi-log container image
@@ -132,6 +132,13 @@ run-container: ## Run the container locally (binds config.toml + serial)
 
 logs-container: ## Tail logs from a locally running container
 	docker logs -f pi-log
+
+publish: build push ## Build and push the container image
+	@echo "✔ Image built and pushed to GHCR"
+
+release: publish deploy restart ## Full release: build, push, deploy, restart
+	@echo "✔ Full release completed"
+
 
 # ------------------------------------------------------------------------
 # Ansible Deployment
@@ -172,7 +179,8 @@ tail: ## Follow live logs from the Pi
 	ssh $(PI_USER)@$(PI_HOST) "sudo journalctl -u $(SERVICE) -f"
 
 db-shell: ## Open SQLite shell on the Pi
-	ssh $(PI_USER)@$(PI_HOST) "sudo sqlite3 /opt/pi-log/readings.db"
+	ssh $(PI_USER)@$(PI_HOST) "sudo sqlite3 /var/lib/pi-log/readings.db"
+
 
 # ------------------------------------------------------------------------
 # Pi Health + Maintenance

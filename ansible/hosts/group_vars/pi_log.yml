@@ -1,3 +1,0 @@
-# ansible/inventory/group_vars/pi_log.yml
----
-pi_log_enabled: true
