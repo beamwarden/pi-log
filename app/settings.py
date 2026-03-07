@@ -39,6 +39,7 @@ class Settings:
         self.push = Section(raw.get("push", {}))
         self.ingestion = Section(raw.get("ingestion", {}))
         self.telemetry = Section(raw.get("telemetry", {}))
+        self.device = Section(raw.get("device", {}))
 
     @classmethod
     def from_dict(cls, raw: Dict[str, Any]) -> "Settings":

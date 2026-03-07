@@ -2,6 +2,7 @@
 
 import os  # noqa: F401
 import sqlite3
+from datetime import datetime, timezone
 import pytest
 from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
@@ -90,12 +91,14 @@ def push_client(tmp_path):
 def geiger_record():
     def _factory(**overrides):
         base = {
+            "id": None,
             "raw": "RAW",
             "counts_per_second": 10,
             "counts_per_minute": 600,
             "microsieverts_per_hour": 0.10,
             "mode": "FAST",
-            "device_id": "pi-log",
+            "device_id": "beamrider-0001",
+            "timestamp": datetime.now(timezone.utc),
         }
         base.update(overrides)
         return GeigerRecord(**base)
