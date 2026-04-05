@@ -107,11 +107,13 @@ class PushClient:
         """
         Push a single GeigerRecord to the Beamwarden ingest endpoint.
 
-        Beamwarden contract (POST /api/readings/ingest/):
-            beamrider_serial  — device serial_number registered in Beamwarden
-            sensor_name       — logical sensor name (e.g. "geiger")
-            recorded_at       — device-side ISO8601 timestamp
-            payload           — arbitrary JSON with the sensor reading
+        Beamwarden contract (POST /api/readings):
+            sensor_type — logical sensor name (e.g. "geiger")
+            payload     — arbitrary JSON with the sensor reading
+            timestamp   — device-side ISO8601 timestamp
+
+        Device identity is established entirely by the bearer token —
+        no serial number is needed in the request body.
 
         Returns True on success (HTTP 201).
         """
@@ -123,15 +125,14 @@ class PushClient:
             headers["Authorization"] = f"Bearer {self.api_token}"
 
         body = {
-            "beamrider_serial": self.device_name,
-            "sensor_name": "geiger",
-            "recorded_at": record.timestamp.isoformat(),
+            "sensor_type": "geiger",
             "payload": {
                 "cps": record.counts_per_second,
                 "cpm": record.counts_per_minute,
                 "uSv_h": record.microsieverts_per_hour,
                 "mode": record.mode,
             },
+            "timestamp": record.timestamp.isoformat(),
         }
 
         try:

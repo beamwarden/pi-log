@@ -74,19 +74,19 @@ class GeigerRecord:
 
     # ------------------------------------------------------------
     # Payload for Beamwarden ingest API
-    # Beamwarden contract: POST /api/readings/ingest/
+    # Beamwarden contract: POST /api/readings
+    # Device identity is established by the bearer token, not the body.
     # ------------------------------------------------------------
-    def to_ingest_payload(self, beamrider_serial: str) -> dict[str, Any]:
+    def to_ingest_payload(self) -> dict[str, Any]:
         return {
-            "beamrider_serial": beamrider_serial,
-            "sensor_name": "geiger",
-            "recorded_at": self.timestamp.isoformat(),
+            "sensor_type": "geiger",
             "payload": {
                 "cps": self.counts_per_second,
                 "cpm": self.counts_per_minute,
                 "uSv_h": self.microsieverts_per_hour,
                 "mode": self.mode.upper(),
             },
+            "timestamp": self.timestamp.isoformat(),
         }
 
     # ------------------------------------------------------------
