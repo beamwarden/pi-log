@@ -41,7 +41,6 @@ def load_config(
     - Valid file → return SettingsNamespace
     """
     path = Path(path)
-    print(">>> loading:", path)
 
     if not path.exists():
         return {}
@@ -49,7 +48,6 @@ def load_config(
     try:
         with path.open("rb") as f:
             data: Any = tomllib.load(f)
-            print(">>> parsed:", data)
 
     except Exception:
         return {}

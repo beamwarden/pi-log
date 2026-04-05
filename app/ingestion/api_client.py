@@ -15,11 +15,11 @@ class PushClient:
     PushClient is the ingestion engine:
       - receives parsed records via handle_record()
       - writes them to SQLite
-      - pushes them immediately to the ingestion API
+      - pushes them immediately to the Beamwarden ingest API
       - marks them pushed on success
 
-    Device identity headers (X-Device-Name, X-Device-Token) are added to every
-    push request so Beamwarden can authenticate the device.
+    Beamwarden identifies devices by serial_number (device_name) and
+    authenticates via a per-device bearer token (device_token).
     """
 
     def __init__(
@@ -39,8 +39,9 @@ class PushClient:
         self.device_id = device_id
         self.db_path = db_path
 
-        # Device identity for Beamwarden
+        # serial_number used to look up the Beamrider in Beamwarden
         self.device_name = device_name or device_id
+        # bearer token for Beamwarden device authentication
         self.device_token = device_token or ""
 
         self._conn = sqlite3.connect(self.db_path, check_same_thread=False)
@@ -104,31 +105,40 @@ class PushClient:
 
     def _push_single(self, record: GeigerRecord) -> bool:
         """
-        Push a single GeigerRecord to the ingestion endpoint.
-        Returns True on success.
+        Push a single GeigerRecord to the Beamwarden ingest endpoint.
+
+        Beamwarden contract (POST /api/readings):
+            sensor_type — logical sensor name (e.g. "geiger")
+            payload     — arbitrary JSON with the sensor reading
+            timestamp   — device-side ISO8601 timestamp
+
+        Device identity is established entirely by the bearer token —
+        no serial number is needed in the request body.
+
+        Returns True on success (HTTP 201).
         """
 
-        headers = {
-            "X-Device-Name": self.device_name,
-            "X-Device-Token": self.device_token,
-        }
-
-        if self.api_token:
+        headers: Dict[str, str] = {}
+        if self.device_token:
+            headers["Authorization"] = f"Bearer {self.device_token}"
+        elif self.api_token:
             headers["Authorization"] = f"Bearer {self.api_token}"
 
-        payload = {
-            "counts_per_second": record.counts_per_second,
-            "counts_per_minute": record.counts_per_minute,
-            "microsieverts_per_hour": record.microsieverts_per_hour,
-            "mode": record.mode,
-            "device_id": record.device_id,
+        body = {
+            "sensor_type": "geiger",
+            "payload": {
+                "cps": record.counts_per_second,
+                "cpm": record.counts_per_minute,
+                "uSv_h": record.microsieverts_per_hour,
+                "mode": record.mode,
+            },
             "timestamp": record.timestamp.isoformat(),
         }
 
         try:
             resp = requests.post(
                 self.ingest_url,
-                json=payload,
+                json=body,
                 headers=headers,
                 timeout=5,
             )

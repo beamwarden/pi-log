@@ -13,9 +13,9 @@ class GeigerRecord:
     Canonical local representation of a single Geiger reading in Pi-log.
 
     This is the shape we store in SQLite and use as the source for pushes
-    to LogExp. It keeps the raw MightyOhm CSV line for debugging and
-    diagnostics, but the wire contract with LogExp uses only the canonical
-    ingestion fields (no raw or local timestamp).
+    to Beamwarden. It keeps the raw MightyOhm CSV line for debugging and
+    diagnostics, but the wire contract with Beamwarden wraps the sensor
+    fields inside a payload envelope (see to_ingest_payload()).
 
     Fields:
         id: Optional database primary key (None before insert).
@@ -24,9 +24,9 @@ class GeigerRecord:
         counts_per_minute: CPM value parsed from the CSV.
         microsieverts_per_hour: uSv/hr value parsed from the CSV.
         mode: One of "SLOW", "FAST", or "INST".
-        device_id: Logical identifier for this Pi-log node (e.g. "pi-log").
+        device_id: Logical identifier for this Pi-log node (e.g. "beamrider-0001").
         timestamp: UTC timestamp recorded locally when the reading was created.
-        pushed: Whether this reading has been successfully pushed to LogExp.
+        pushed: Whether this reading has been successfully pushed to Beamwarden.
     """
 
     id: Optional[int]
@@ -73,15 +73,20 @@ class GeigerRecord:
         )
 
     # ------------------------------------------------------------
-    # Payload for LogExp ingestion API
+    # Payload for Beamwarden ingest API
+    # Beamwarden contract: POST /api/readings
+    # Device identity is established by the bearer token, not the body.
     # ------------------------------------------------------------
-    def to_logexp_payload(self) -> dict[str, Any]:
+    def to_ingest_payload(self) -> dict[str, Any]:
         return {
-            "counts_per_second": self.counts_per_second,
-            "counts_per_minute": self.counts_per_minute,
-            "microsieverts_per_hour": self.microsieverts_per_hour,
-            "mode": self.mode.upper(),
-            "device_id": self.device_id,
+            "sensor_type": "geiger",
+            "payload": {
+                "cps": self.counts_per_second,
+                "cpm": self.counts_per_minute,
+                "uSv_h": self.microsieverts_per_hour,
+                "mode": self.mode.upper(),
+            },
+            "timestamp": self.timestamp.isoformat(),
         }
 
     # ------------------------------------------------------------
